@@ -1,0 +1,119 @@
+### TESTE API BOOKS - Sistema de Biblioteca
+### URL Base: http://localhost:3000
+
+### 1. PRIMEIRO: Criar uma conta ADMIN para gerenciar livros
+POST http://localhost:3000/auth/signup
+Content-Type: application/json
+
+{
+  "name": "Admin Biblioteca",
+  "email": "admin@biblioteca.com",
+  "password": "123456",
+  "role": "ADMIN"
+}
+
+### 2. Fazer login para obter o token JWT
+POST http://localhost:3000/auth/signin
+Content-Type: application/json
+
+{
+  "email": "admin@biblioteca.com",
+  "password": "123456"
+}
+
+### ⚠️ COPIE O TOKEN DA RESPOSTA ACIMA E COLE NAS PRÓXIMAS REQUISIÇÕES ⚠️
+@token = SEU_TOKEN_AQUI
+
+### 3. Criar um livro (ADMIN apenas)
+POST http://localhost:3000/books
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "O Senhor dos Anéis",
+  "author": "J.R.R. Tolkien",
+  "isbn": "978-85-8057-910-8",
+  "description": "Uma jornada épica através da Terra-média",
+  "totalCopies": 5
+}
+
+### 4. Criar outro livro
+POST http://localhost:3000/books
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "1984",
+  "author": "George Orwell",
+  "isbn": "978-85-359-0277-4",
+  "description": "Distopia sobre controle totalitário",
+  "totalCopies": 3
+}
+
+### 5. Listar todos os livros (qualquer usuário autenticado)
+GET http://localhost:3000/books
+Authorization: Bearer {{token}}
+
+### 6. Buscar livro específico
+GET http://localhost:3000/books/ID_DO_LIVRO
+Authorization: Bearer {{token}}
+
+### 7. Editar um livro (ADMIN apenas)
+PATCH http://localhost:3000/books/ID_DO_LIVRO
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "description": "Descrição atualizada do livro",
+  "totalCopies": 7
+}
+
+### 8. Criar usuário comum para testar aluguel
+POST http://localhost:3000/auth/signup
+Content-Type: application/json
+
+{
+  "name": "João Leitor",
+  "email": "joao@email.com",
+  "password": "123456",
+  "role": "USER"
+}
+
+### 9. Login do usuário comum
+POST http://localhost:3000/auth/signin
+Content-Type: application/json
+
+{
+  "email": "joao@email.com",
+  "password": "123456"
+}
+
+### ⚠️ COPIE O TOKEN DO USUÁRIO COMUM ⚠️
+@userToken = TOKEN_DO_USUARIO_COMUM
+
+### 10. Alugar um livro
+POST http://localhost:3000/books/ID_DO_LIVRO/rent
+Content-Type: application/json
+Authorization: Bearer {{userToken}}
+
+{
+  "dueDate": "2025-11-20T00:00:00Z"
+}
+
+### 11. Devolver um livro
+POST http://localhost:3000/books/ID_DO_LIVRO/return
+Authorization: Bearer {{userToken}}
+
+### 12. Deletar um livro (ADMIN apenas)
+DELETE http://localhost:3000/books/ID_DO_LIVRO
+Authorization: Bearer {{token}}
+
+### =====================================
+### DICAS PARA TESTAR:
+### =====================================
+### 1. Execute as requisições 1 e 2 primeiro para obter token admin
+### 2. Substitua {{token}} pelo token real nas próximas requisições
+### 3. Após criar livros, copie o ID da resposta para usar nas rotas específicas
+### 4. Execute 8 e 9 para criar usuário comum e testar aluguel
+### 5. Substitua {{userToken}} pelo token do usuário comum
+### =====================================

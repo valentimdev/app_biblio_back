@@ -21,17 +21,22 @@
   <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
   [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
 
-## Description
+## Descrição
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+API NestJS para gestão de usuários e eventos (CRUD completo), com autenticação JWT, papéis (USER/ADMIN), inscrições em eventos e endpoint inicial de `home`. Banco baseado no diagrama incluído (`db_diagram.png`) e Prisma ORM.
 
-## Project setup
+## Stack
+
+- **NestJS 11**, **TypeScript**, **Prisma** (PostgreSQL), **JWT**, **argon2**
+- Validação com `class-validator`, Guards de `JWT` e `Roles`
+
+## Setup do projeto
 
 ```bash
 $ npm install
 ```
 
-## Compile and run the project
+## Executar (dev)
 
 ```bash
 # development
@@ -44,7 +49,142 @@ $ npm run start:dev
 $ npm run start:prod
 ```
 
-## Run tests
+## Banco de Dados (Prisma)
+
+1) Configure `DATABASE_URL` no `.env` (ou suba via `docker-compose.yml`).
+2) Rode as migrações e gere o client:
+
+```bash
+npx prisma migrate dev --name init_events_roles
+npx prisma generate
+```
+
+3) Seed de ADMIN (usa `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` se presentes):
+
+```bash
+npm run db:seed
+```
+
+## Endpoints principais
+
+- Autenticação
+  - POST `/auth/signup` { email, password, name?, matricula? }
+  - POST `/auth/signin` { email, password }
+  - POST `/auth/change-password` (JWT) { currentPassword, newPassword }
+  - POST `/auth/forgot` { email }  // stub seguro
+  - POST `/auth/reset` { token, newPassword } // stub seguro
+- Usuário
+  - GET `/users/me` (JWT)
+  - PATCH `/users` (JWT)
+- Home
+  - GET `/home`  → próximos eventos
+- Eventos
+  - GET `/events`
+  - GET `/events/:id`
+  - POST `/events` (JWT + ADMIN)
+  - PATCH `/events/:id` (JWT + ADMIN e criador)
+  - DELETE `/events/:id` (JWT + ADMIN e criador)
+  - POST `/events/:id/register` (JWT)
+  - DELETE `/events/:id/register` (JWT)
+  - GET `/events/:id/registrations` (JWT + ADMIN)
+
+## Modelos de Dados (Prisma)
+
+Modelos implementados conforme o diagrama:
+
+```mermaid
+erDiagram
+  User ||--o{ Event : "cria (adminId)"
+  User ||--o{ EventRegistration : "inscreve"
+  Event ||--o{ EventRegistration : "tem inscrições"
+
+  User {
+    string id PK
+    string name
+    string email UK
+    string matricula UK
+    string passwordHash
+    enum RoleEnum
+    datetime createdAt
+    datetime updatedAt
+  }
+
+  Event {
+    string id PK
+    string title
+    string description
+    datetime startTime
+    datetime endTime
+    string location
+    string imageUrl
+    string lecturers
+    string adminId FK -> User.id
+  }
+
+  EventRegistration {
+    string userId FK -> User.id
+    string eventId FK -> Event.id
+    datetime registeredAt
+    PK "userId,eventId"
+  }
+```
+
+## Casos de Uso
+
+```mermaid
+flowchart TD
+  A[Usuário Anônimo] -->|Cadastrar| UC_Signup[UC: Cadastrar]
+  A -->|Login| UC_Signin[UC: Login]
+  A -->|Listar Eventos| UC_ListEvents[UC: Listar Eventos]
+
+  B[Usuário Autenticado (ROLE=USER)] -->|Ver Detalhes| UC_ViewEvent[UC: Ver Evento]
+  B -->|Inscrever-se| UC_Register[UC: Inscrever-se em Evento]
+  B -->|Cancelar Inscrição| UC_Unregister[UC: Cancelar Inscrição]
+  B -->|Alterar Senha| UC_ChangePass[UC: Alterar Senha]
+
+  C[Administrador (ROLE=ADMIN)] -->|Criar| UC_CreateEvent[UC: Criar Evento]
+  C -->|Editar| UC_UpdateEvent[UC: Editar Evento]
+  C -->|Excluir| UC_DeleteEvent[UC: Excluir Evento]
+  C -->|Ver Inscritos| UC_ListRegs[UC: Listar Inscrições do Evento]
+```
+
+## Arquitetura do Sistema
+
+```mermaid
+flowchart LR
+  Client[Frontend / Mobile] -- HTTP/JSON --> API[NestJS API]
+  subgraph API
+    AuthModule -->|JWT| JwtStrategy
+    AuthModule --> RolesGuard
+    UserModule
+    EventModule --> PrismaService
+    HomeModule --> PrismaService
+  end
+
+  PrismaService -->|Prisma Client| PostgreSQL[(PostgreSQL)]
+```
+
+## Segurança e Autorização
+
+- Autenticação por JWT (Bearer) com expiração curta.
+- `RolesGuard` checa `role` do usuário (ADMIN/USER) para rotas administrativas.
+- Senhas com `argon2`.
+
+## Variáveis de Ambiente
+
+- `DATABASE_URL`: conexão PostgreSQL
+- `JWT_SECRET`: segredo para assinatura do token
+- `PORT`: porta da API (default 3000)
+- `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME`: seed do admin
+
+## Scripts úteis
+
+```bash
+npm run start:dev          # iniciar em dev
+npx prisma migrate dev     # aplicar migrações
+npx prisma generate        # gerar client
+npm run db:seed            # rodar seed (admin)
+```
 
 ```bash
 # unit tests

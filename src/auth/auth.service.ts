@@ -1,11 +1,11 @@
 import { ForbiddenException, Injectable } from "@nestjs/common";
-import { User,Bookmark } from "@prisma/client";
 import { PrismaService } from "src/prisma/prisma.service";
 import { AuthDto } from "./dto";
 import * as argon from 'argon2';
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/binary";
 import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
+import { ChangePasswordDto } from './dto/password.dto';
 @Injectable()
 export class AuthService {
     constructor(private prisma:PrismaService,private jwt:JwtService, private config:ConfigService){}
@@ -17,15 +17,18 @@ export class AuthService {
         try{
         const user = await this.prisma.user.create({
             data:{
-                email:dto.email,
-                hash,
+                email: dto.email,
+                passwordHash: hash,
+                name: dto.name ?? dto.email.split('@')[0],
+                matricula: dto.matricula ?? null,
+                // role padrão USER no schema
             },
         });
         return this.signToken(user.id, user.email);
     }
         catch(error){
             if (error instanceof PrismaClientKnownRequestError) {
-                if(error.code === 'P20002'){
+                if(error.code === 'P2002'){
                     throw new ForbiddenException('Credenciais ja estao em uso');
                 }
             }
@@ -42,7 +45,7 @@ export class AuthService {
         //se nao encontrar, lancar excecao
         if(!user) throw new ForbiddenException('Credenciais incorretas');
         //se encontrar, verificar se o password esta correto
-        const isPasswordValid = await argon.verify(user.hash, dto.password);
+        const isPasswordValid = await argon.verify(user.passwordHash, dto.password);
         //se o password estiver incorreto, lancar excecao
         if(!isPasswordValid) throw new ForbiddenException('Credenciais incorretas'); 
 
@@ -51,7 +54,7 @@ export class AuthService {
     }
 
     async signToken(
-        userId : number,
+        userId : string,
         email: string
     ): Promise<{ access_token: string }> {
         const payload = {
@@ -71,4 +74,27 @@ export class AuthService {
         };
     }
 
+    async changePassword(userId: string, dto: ChangePasswordDto) {
+        const user = await this.prisma.user.findUnique({ where: { id: userId } });
+        if (!user) throw new ForbiddenException('Usuário não encontrado');
+        const valid = await argon.verify(user.passwordHash, dto.currentPassword);
+        if (!valid) throw new ForbiddenException('Senha atual inválida');
+        const newHash = await argon.hash(dto.newPassword);
+        await this.prisma.user.update({ where: { id: userId }, data: { passwordHash: newHash } });
+        return { success: true };
+    }
+
+    // Stubs controlados: prontos para integrar e-mail/queue no futuro
+    async requestPasswordReset(email: string) {
+        // Não persistimos token por ausência no diagrama.
+        // Responde 202 para integracão futura de e-mail.
+        const exists = await this.prisma.user.findUnique({ where: { email } });
+        if (!exists) return { accepted: true };
+        return { accepted: true };
+    }
+
+    async resetPassword(_token: string, _newPassword: string) {
+        // Sem tabela de tokens no diagrama, mantemos endpoint como no-op seguro
+        return { success: true };
+    }
 }

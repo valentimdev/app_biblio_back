@@ -20,7 +20,7 @@ model User {
 
   name         String
   email        String   @unique
-  matricula    String?  @unique
+  matricula    String  @unique
   passwordHash String   @map("password")
   role         RoleEnum @default(USER)
 

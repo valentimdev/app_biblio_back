@@ -6,7 +6,7 @@ import { ChangePasswordDto, ForgotPasswordDto, ResetPasswordDto } from './dto/pa
 import { GetUser } from './decorator/get-user.decorator';
 
 @Controller('auth')
-export class AuthControler{
+export class AuthController{
     constructor(private authService: AuthService){}
     
     @Post('signup')

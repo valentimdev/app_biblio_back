@@ -20,7 +20,7 @@ export class AuthService {
                 email: dto.email,
                 passwordHash: hash,
                 name: dto.name ?? dto.email.split('@')[0],
-                matricula: dto.matricula ?? null,
+                matricula: dto.matricula,
                 // role padrão USER no schema
             },
         });
@@ -39,7 +39,7 @@ export class AuthService {
     async signin(dto:AuthDto){
         //encontrar o usuario por email
         const user = await this.prisma.user.findUnique({
-            where:{email:dto.email}
+            where:{matricula: dto.matricula}
         },
         );
         //se nao encontrar, lancar excecao
@@ -50,22 +50,22 @@ export class AuthService {
         if(!isPasswordValid) throw new ForbiddenException('Credenciais incorretas'); 
 
         //se o password estiver correto, retornar o usuario
-        return this.signToken(user.id, user.email);
+        return this.signToken(user.id,user.matricula);
     }
 
     async signToken(
         userId : string,
-        email: string
+        matricula: string
     ): Promise<{ access_token: string }> {
         const payload = {
             sub: userId,
-            email
+            matricula:matricula
         }
         const secret = this.config.get('JWT_SECRET');
 
         const token = await this.jwt.signAsync(
             payload,{
-            expiresIn: '15m',
+            expiresIn: '1d',
             secret: secret,
         }
     );

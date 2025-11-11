@@ -7,26 +7,28 @@ async function main() {
   const adminEmail = process.env.ADMIN_EMAIL || 'admin@admin.com';
   const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@123456';
   const adminName = process.env.ADMIN_NAME || 'Administrador';
+  const adminMatricula = process.env.ADMIN_MATRICULA || '1337420';
 
-  const existing = await prisma.user.findUnique({ where: { email: adminEmail } });
+  const existing = await prisma.user.findUnique({ where: { matricula: adminMatricula } });
   if (existing) {
     if (existing.role !== RoleEnum.ADMIN) {
       await prisma.user.update({ where: { id: existing.id }, data: { role: RoleEnum.ADMIN } });
     }
-    console.log('Admin já existente:', adminEmail);
+    console.log('Admin já existente:', adminMatricula);
     return;
   }
 
   const passwordHash = await argon.hash(adminPassword);
   const admin = await prisma.user.create({
     data: {
+      matricula:adminMatricula,
       email: adminEmail,
       name: adminName,
       passwordHash,
       role: RoleEnum.ADMIN,
     },
   });
-  console.log('Admin criado:', admin.email);
+  console.log('Admin criado:', admin.matricula);
 }
 
 main()

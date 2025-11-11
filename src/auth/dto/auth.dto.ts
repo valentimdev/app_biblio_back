@@ -21,3 +21,14 @@ export class AuthDto{
 
 
 }
+
+export class LoginDto{
+    @IsString()
+    @IsNotEmpty()
+    matricula: string;
+
+    @IsString()
+    @IsNotEmpty()
+    @MinLength(6)
+    password:string;
+}

@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable } from "@nestjs/common";
 import { PrismaService } from "src/prisma/prisma.service";
-import { AuthDto } from "./dto";
+import { AuthDto, LoginDto } from "./dto";
 import * as argon from 'argon2';
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/binary";
 import { JwtService } from "@nestjs/jwt";
@@ -36,7 +36,7 @@ export class AuthService {
         }        
     }
 
-    async signin(dto:AuthDto){
+    async signin(dto:LoginDto){
         //encontrar o usuario por email
         const user = await this.prisma.user.findUnique({
             where:{matricula: dto.matricula}

@@ -56,21 +56,6 @@ export class BookService {
     return { success: true };
   }
   
-  async rentBook(userId: string, bookId: string, dueDate: Date) {
-  const book = await this.findOne(bookId);
-  if (book.availableCopies <= 0) {
-    throw new ForbiddenException('No copies available');
-  }
-  await this.prisma.rental.create({
-    data: { userId, bookId, rentalDate: new Date(), dueDate },
-  });
-  await this.prisma.book.update({
-    where: { id: bookId },
-    data: { availableCopies: { decrement: 1 } },
-  });
-  return { success: true };
-}
-  
 async rentBook(userId: string, bookId: string, dueDate: Date) {
   console.log('rentBook chamado:', { userId, bookId, dueDate });
 

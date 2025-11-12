@@ -22,10 +22,10 @@ describe('AppController (e2e)', () => {
       }),
     );
     await app.init();
-    await app.listen(3000);
+    await app.listen(3001);
     prisma = app.get(PrismaService);
     await prisma.cleanDb();
-    pactum.request.setBaseUrl('http://localhost:3000');
+    pactum.request.setBaseUrl('http://localhost:3001');
   });
   afterAll(() => {
     app.close();

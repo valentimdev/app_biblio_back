@@ -6,8 +6,9 @@ import { ConfigModule } from '@nestjs/config';
 import { EventModule } from './event/event.module';
 import { HomeModule } from './home/home.module';
 import { BookModule } from './book/book.module';
+import { ChatModule } from './chat/chat.module';
   
 @Module({
-  imports: [AuthModule, UserModule, EventModule, HomeModule, PrismaModule, ConfigModule.forRoot({isGlobal:true}), BookModule],
+  imports: [AuthModule, UserModule, EventModule, HomeModule, PrismaModule, ConfigModule.forRoot({isGlobal:true}), BookModule, ChatModule],
 })
 export class AppModule {}

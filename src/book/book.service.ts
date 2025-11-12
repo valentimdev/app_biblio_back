@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateBookDto } from './dto/create-book.dto';
 import { EditBookDto } from './dto/edit-book.dto';
@@ -91,5 +91,18 @@ async rentBook(userId: string, bookId: string, dueDate: Date) {
   console.log('Rental criado:', rental);
   return { success: true };
 }
-
+  async getMyRentals(userId: string) {
+    const rentals = await this.prisma.rental.findMany({
+      where: {
+        userId: userId,
+      },
+      include: {
+        book: true,
+      },
+      orderBy: {
+        rentalDate: 'desc', 
+      },
+    });
+    return rentals;
+  }
 }

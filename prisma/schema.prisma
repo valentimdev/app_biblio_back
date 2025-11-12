@@ -20,7 +20,7 @@ model User {
 
   name         String
   email        String   @unique
-  matricula    String?  @unique
+  matricula    String  @unique
   passwordHash String   @map("password")
   role         RoleEnum @default(USER)
 
@@ -30,8 +30,41 @@ model User {
 
   events        Event[]           @relation("UserEvents") // events created by admin
   registrations EventRegistration[]
+  books         Book[]            
+  rentals       Rental[]
 
   @@map("users")
+}
+model Book {
+  id              String   @id @default(uuid())
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  title           String
+  author          String
+  isbn            String   @unique
+  description     String?
+  totalCopies     Int      @map("total_copies")
+  availableCopies Int      @map("available_copies")
+  adminId         String   @map("admin_id")
+  admin           User     @relation(fields: [adminId], references: [id])
+  rentals         Rental[]
+
+  @@map("books")
+}
+model Rental {
+  id         String   @id @default(uuid())
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  userId     String   @map("user_id")
+  bookId     String   @map("book_id")
+  rentalDate DateTime @map("rental_date")
+  dueDate    DateTime @map("due_date")
+  returnDate DateTime? @map("return_date")
+
+  user User @relation(fields: [userId], references: [id])
+  book Book @relation(fields: [bookId], references: [id])
+
+  @@map("rentals")
 }
 
 model Event {
@@ -48,6 +81,8 @@ model Event {
   // Admin creator
   adminId String
   admin   User     @relation("UserEvents", fields: [adminId], references: [id])
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   // Registrations
   registrations EventRegistration[]

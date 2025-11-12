@@ -197,7 +197,7 @@ flowchart LR
 
 - `DATABASE_URL`: conexão PostgreSQL
 - `JWT_SECRET`: segredo para assinatura do token
-- `PORT`: porta da API (default 3000)
+- `PORT`: porta da API (default 30001)
 - `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME`: seed do admin
 - `AZURE_STORAGE_CONNECTION_STRING`: string de conexão do Azure Blob Storage
 - `AZURE_STORAGE_CONTAINER`: (opcional) container utilizado para armazenar imagens (`images` por padrão)

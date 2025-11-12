@@ -34,6 +34,13 @@ export class CreateEventDto {
   @IsString()
   @IsOptional()
   lecturers?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  isDisabled?: boolean;
+  
+  @IsOptional()
+  seats?: number;
 }
 
 

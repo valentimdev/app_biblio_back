@@ -48,6 +48,8 @@ export class EventService {
           imageId: normalizedImageId,
         }),
         lecturers: dto.lecturers,
+        seats: dto.seats,
+        isDisabled: dto.isDisabled || false,
         adminId,
       },
       include: {

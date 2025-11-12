@@ -70,19 +70,41 @@ export class BookService {
   });
   return { success: true };
 }
-async getMyRentals(userId: string) {
-    const rentals = await this.prisma.rental.findMany({
-      where: {
-        userId: userId,
-      },
-      include: {
-        book: true,
-      },
-      orderBy: {
-        rentalDate: 'desc', 
-      },
-    });
-    return rentals;
+  
+async rentBook(userId: string, bookId: string, dueDate: Date) {
+  console.log('rentBook chamado:', { userId, bookId, dueDate });
+
+  const book = await this.prisma.book.findUnique({ where: { id: bookId } });
+  if (!book) throw new NotFoundException('Livro não encontrado');
+
+  if (book.availableCopies <= 0) {
+    throw new BadRequestException('Sem cópias disponíveis');
   }
+
+  const activeRental = await this.prisma.rental.findFirst({
+    where: { userId, bookId, returnDate: null },
+  });
+
+  if (activeRental) {
+    throw new BadRequestException('Você já alugou este livro');
+  }
+
+  await this.prisma.book.update({
+    where: { id: bookId },
+    data: { availableCopies: { decrement: 1 } },
+  });
+
+  const rental = await this.prisma.rental.create({
+    data: {
+      userId,
+      bookId,
+      rentalDate: new Date(),
+      dueDate,
+    },
+  });
+
+  console.log('Rental criado:', rental);
+  return { success: true };
+}
 
 }

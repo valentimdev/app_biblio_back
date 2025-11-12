@@ -70,5 +70,19 @@ export class BookService {
   });
   return { success: true };
 }
+async getMyRentals(userId: string) {
+    const rentals = await this.prisma.rental.findMany({
+      where: {
+        userId: userId,
+      },
+      include: {
+        book: true,
+      },
+      orderBy: {
+        rentalDate: 'desc', 
+      },
+    });
+    return rentals;
+  }
 
 }

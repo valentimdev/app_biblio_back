@@ -68,4 +68,12 @@ export class BookService {
     });
     return { success: true };
   }
+  
+  async getMyRentals(userId: string) {
+  return this.prisma.rental.findMany({
+    where: { userId, returnDate: null },
+    include: { book: true }
+  });
+  }
+
 }

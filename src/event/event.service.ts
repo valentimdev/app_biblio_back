@@ -1,13 +1,24 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { StorageService } from 'src/storage/storage.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 
 @Injectable()
 export class EventService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storageService: StorageService,
+  ) {}
 
-  async create(adminId: string, dto: CreateEventDto) {
+  async create(adminId: string, dto: CreateEventDto, image?: Express.Multer.File) {
+    let imageUrl = dto.imageUrl;
+
+    // Upload image if provided
+    if (image) {
+      imageUrl = await this.storageService.uploadFile(image, 'events');
+    }
+
     return (this.prisma as any).event.create({
       data: {
         title: dto.title,
@@ -15,7 +26,7 @@ export class EventService {
         startTime: dto.startTime,
         endTime: dto.endTime,
         location: dto.location,
-        imageUrl: dto.imageUrl,
+        imageUrl,
         lecturers: dto.lecturers,
         seats: dto.seats,
         isDisabled: dto.isDisabled || false,
@@ -36,14 +47,29 @@ export class EventService {
     return event;
   }
 
-  async update(id: string, adminId: string, dto: UpdateEventDto) {
+  async update(id: string, adminId: string, dto: UpdateEventDto, image?: Express.Multer.File) {
     const event = await this.findOne(id);
     if (event.adminId !== adminId) {
       throw new ForbiddenException('Apenas o admin criador pode editar este evento');
     }
+
+    const updateData: any = { ...dto };
+
+    // Upload new image if provided
+    if (image) {
+      // Delete old image if exists
+      if (event.imageUrl) {
+        await this.storageService.deleteFileByUrl(event.imageUrl);
+      }
+      updateData.imageUrl = await this.storageService.uploadFile(image, 'events');
+    } else if (dto.imageUrl !== undefined) {
+      // If imageUrl is explicitly set in DTO (including null to remove), use it
+      updateData.imageUrl = dto.imageUrl;
+    }
+
     return (this.prisma as any).event.update({
       where: { id },
-      data: { ...dto },
+      data: updateData,
     });
   }
 
@@ -52,6 +78,12 @@ export class EventService {
     if (event.adminId !== adminId) {
       throw new ForbiddenException('Apenas o admin criador pode excluir este evento');
     }
+
+    // Delete image from storage if exists
+    if (event.imageUrl) {
+      await this.storageService.deleteFileByUrl(event.imageUrl);
+    }
+
     await (this.prisma as any).event.delete({ where: { id } });
     return { success: true };
   }

@@ -23,6 +23,7 @@ model User {
   matricula    String  @unique
   passwordHash String   @map("password")
   role         RoleEnum @default(USER)
+  imageUrl     String?  @map("image_url")
 
   // Relations
   events        Event[]           @relation("UserEvents") // events created by admin
@@ -40,6 +41,7 @@ model Book {
   author          String
   isbn            String   @unique
   description     String?
+  imageUrl        String?  @map("image_url")
   totalCopies     Int      @map("total_copies")
   availableCopies Int      @map("available_copies")
   adminId         String   @map("admin_id")

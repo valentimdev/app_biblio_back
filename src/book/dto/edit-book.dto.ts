@@ -15,6 +15,10 @@ export class EditBookDto {
   @IsOptional()
   description?: string;
 
+  @IsString()
+  @IsOptional()
+  imageUrl?: string;
+
   @IsInt()
   @IsOptional()
   @Min(0)

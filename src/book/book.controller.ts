@@ -52,4 +52,10 @@ export class BookController {
   return(@Param('id') id: string, @GetUser('id') userId: string) {
     return this.service.returnBook(userId, id);
   }
+
+  @Get('my-rentals')
+  @UseGuards(JwtGuard)
+  getMyRentals(@GetUser('id') userId: string) {
+    return this.service.getMyRentals(userId);
+  }
 }

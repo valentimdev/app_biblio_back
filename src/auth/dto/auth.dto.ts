@@ -1,8 +1,11 @@
 import { MinLength,IsEmail, IsNotEmpty, IsOptional, IsString, MaxLength } from "class-validator";
 
 export class AuthDto{
-    @IsEmail()
+    @IsString()
     @IsNotEmpty()
+    matricula: string;
+    
+    @IsEmail()
     email:string;
 
     @IsString()
@@ -10,14 +13,22 @@ export class AuthDto{
     @MinLength(6)
     password:string;
 
-    // Campos opcionais para cadastro
-    @IsString()
-    @IsOptional()
-    @MaxLength(255)
-    name?: string;
 
     @IsString()
     @IsOptional()
-    matricula?: string;
-    
+    @MaxLength(255)
+    name: string;
+
+
+}
+
+export class LoginDto{
+    @IsString()
+    @IsNotEmpty()
+    matricula: string;
+
+    @IsString()
+    @IsNotEmpty()
+    @MinLength(6)
+    password:string;
 }

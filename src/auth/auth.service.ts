@@ -1,11 +1,12 @@
 import { ForbiddenException, Injectable } from "@nestjs/common";
 import { PrismaService } from "src/prisma/prisma.service";
-import { AuthDto } from "./dto";
+import { AuthDto, LoginDto } from "./dto";
 import * as argon from 'argon2';
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/binary";
 import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import { ChangePasswordDto } from './dto/password.dto';
+import { RoleEnum } from "@prisma/client";
 @Injectable()
 export class AuthService {
     constructor(private prisma:PrismaService,private jwt:JwtService, private config:ConfigService){}
@@ -20,11 +21,11 @@ export class AuthService {
                 email: dto.email,
                 passwordHash: hash,
                 name: dto.name ?? dto.email.split('@')[0],
-                matricula: dto.matricula ?? null,
+                matricula: dto.matricula,
                 // role padrão USER no schema
             },
         });
-        return this.signToken(user.id, user.email);
+        return this.signToken(user.id, user.email,user.role);
     }
         catch(error){
             if (error instanceof PrismaClientKnownRequestError) {
@@ -36,10 +37,10 @@ export class AuthService {
         }        
     }
 
-    async signin(dto:AuthDto){
+    async signin(dto:LoginDto){
         //encontrar o usuario por email
         const user = await this.prisma.user.findUnique({
-            where:{email:dto.email}
+            where:{matricula: dto.matricula}
         },
         );
         //se nao encontrar, lancar excecao
@@ -48,29 +49,34 @@ export class AuthService {
         const isPasswordValid = await argon.verify(user.passwordHash, dto.password);
         //se o password estiver incorreto, lancar excecao
         if(!isPasswordValid) throw new ForbiddenException('Credenciais incorretas'); 
-
-        //se o password estiver correto, retornar o usuario
-        return this.signToken(user.id, user.email);
+        const tokenData = await this.signToken(user.id, user.matricula, user.role);
+        return {
+        access_token: tokenData.access_token,
+        role: user.role                     
+    };
     }
 
     async signToken(
         userId : string,
-        email: string
+        matricula: string,
+        role : RoleEnum
     ): Promise<{ access_token: string }> {
         const payload = {
             sub: userId,
-            email
+            matricula:matricula,
+            role:role
         }
         const secret = this.config.get('JWT_SECRET');
 
         const token = await this.jwt.signAsync(
             payload,{
-            expiresIn: '15m',
+            expiresIn: '1d',
             secret: secret,
         }
     );
         return {
             access_token: token,
+            
         };
     }
 

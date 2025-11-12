@@ -1,24 +1,51 @@
+version: '3.8'
+
 services:
+  # --- Nosso novo serviço da aplicação NestJS ---
+  app:
+    build: . # Diz ao compose para construir a imagem
+             # usando o Dockerfile na pasta atual ('.')
+    ports:
+      # Expõe a porta 3000 do container para a porta 3000 da sua máquina
+      # (Mude se sua app usar outra porta)
+      - "3000:3000"
+    environment:
+      # --- Variáveis de ambiente para sua APP ---
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@dev-db:5432/${POSTGRES_DB}"
+      POSTGRES_HOST: dev-db 
+      POSTGRES_PORT: 5432 # A porta INTERNA do container do postgres
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      # Adicione seu JWT_SECRET e outras vars aqui
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: "3000"
+
+    networks:
+      - freecodecamp
+    # 'depends_on' faz o 'app' esperar o 'dev-db' estar "pronto"
+    # antes de iniciar
+    depends_on:
+      - dev-db
+
+  # --- Seu serviço de banco de dados (como era antes) ---
   dev-db:
     image: postgres:13
     ports:
-      - "5434:5432"
+      - "5435:5432" # Máquina:Container
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     networks:
       - freecodecamp
-  test-db:
-    image: postgres:13
-    ports:
-      - "5435:5432"
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    networks:
-      - freecodecamp
+    # É uma boa prática adicionar um volume para persistir os dados
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
 
 networks:
   freecodecamp:
+
+# Define o volume que usamos acima
+volumes:
+  postgres-data:

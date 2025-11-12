@@ -25,8 +25,8 @@ export class CreateUserDto {
   name: string;
 
   @IsString()
-  @IsOptional()
-  matricula?: string;
+  @IsNotEmpty()
+  matricula: string;
 
   @IsEnum(RoleEnum)
   @IsNotEmpty()

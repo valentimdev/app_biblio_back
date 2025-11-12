@@ -17,6 +17,8 @@ export class EventService {
         location: dto.location,
         imageUrl: dto.imageUrl,
         lecturers: dto.lecturers,
+        seats: dto.seats,
+        isDisabled: dto.isDisabled || false,
         adminId,
       },
     });

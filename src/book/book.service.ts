@@ -39,20 +39,7 @@ export class BookService {
     await this.prisma.book.delete({ where: { id } });
     return { success: true };
   }
-
-
-  async rentBook(userId: string, bookId: string, dueDate: Date) {
-    const book = await this.findOne(bookId);
-    if (book.availableCopies <= 0) throw new ForbiddenException('No copies available');
-    await this.prisma.book.update({
-      where: { id: bookId },
-      data: { availableCopies: { decrement: 1 } as any },
-    });
-    return this.prisma.rental.create({
-      data: { userId, bookId, rentalDate: new Date(), dueDate },
-    });
-  }
-
+  
   async returnBook(userId: string, bookId: string) {
     const rental = await this.prisma.rental.findFirst({
       where: { userId, bookId, returnDate: null },
@@ -68,4 +55,34 @@ export class BookService {
     });
     return { success: true };
   }
+  
+  async rentBook(userId: string, bookId: string, dueDate: Date) {
+  const book = await this.findOne(bookId);
+  if (book.availableCopies <= 0) {
+    throw new ForbiddenException('No copies available');
+  }
+  await this.prisma.rental.create({
+    data: { userId, bookId, rentalDate: new Date(), dueDate },
+  });
+  await this.prisma.book.update({
+    where: { id: bookId },
+    data: { availableCopies: { decrement: 1 } },
+  });
+  return { success: true };
+}
+async getMyRentals(userId: string) {
+    const rentals = await this.prisma.rental.findMany({
+      where: {
+        userId: userId,
+      },
+      include: {
+        book: true,
+      },
+      orderBy: {
+        rentalDate: 'desc', 
+      },
+    });
+    return rentals;
+  }
+
 }

@@ -31,7 +31,7 @@ export class UserService {
           email: dto.email,
           passwordHash: hash,
           name: dto.name,
-          matricula: dto.matricula ?? null,
+          matricula: dto.matricula,
           role: dto.role,
         },
       });

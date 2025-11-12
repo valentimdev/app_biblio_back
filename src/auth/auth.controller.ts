@@ -6,7 +6,7 @@ import { ChangePasswordDto, ForgotPasswordDto, ResetPasswordDto } from './dto/pa
 import { GetUser } from './decorator/get-user.decorator';
 
 @Controller('auth')
-export class AuthControler{
+export class AuthController{
     constructor(private authService: AuthService){}
     
     @Post('signup')
@@ -16,7 +16,7 @@ export class AuthControler{
     
     @Post('signin')
     @HttpCode(HttpStatus.OK)
-    signin(@Body() dto: dto.AuthDto){
+    signin(@Body() dto: dto.LoginDto){
         return this.authService.signin(dto);
     }
 

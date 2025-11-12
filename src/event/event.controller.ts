@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { EventService } from './event.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
@@ -24,19 +25,26 @@ export class EventController {
   @UseGuards(JwtGuard, RolesGuard)
   @Roles('ADMIN')
   @Post()
-  create(@GetUser('id') adminId: string, @Body() dto: CreateEventDto) {
-    return this.eventService.create(adminId, dto);
+  @UseInterceptors(FileInterceptor('image'))
+  async create(
+    @GetUser('id') adminId: string,
+    @Body() dto: CreateEventDto,
+    @UploadedFile() image?: Express.Multer.File,
+  ) {
+    return this.eventService.create(adminId, dto, image);
   }
 
   @UseGuards(JwtGuard, RolesGuard)
   @Roles('ADMIN')
   @Patch(':id')
-  update(
+  @UseInterceptors(FileInterceptor('image'))
+  async update(
     @Param('id') id: string,
     @GetUser('id') adminId: string,
     @Body() dto: UpdateEventDto,
+    @UploadedFile() image?: Express.Multer.File,
   ) {
-    return this.eventService.update(id, adminId, dto);
+    return this.eventService.update(id, adminId, dto, image);
   }
 
   @UseGuards(JwtGuard, RolesGuard)

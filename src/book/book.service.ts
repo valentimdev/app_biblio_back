@@ -1,11 +1,15 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { StorageService } from 'src/storage/storage.service';
 import { CreateBookDto } from './dto/create-book.dto';
 import { EditBookDto } from './dto/edit-book.dto';
 
 @Injectable()
 export class BookService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private storageService: StorageService,
+  ) {}
 
   async findAll() {
     return this.prisma.book.findMany();
@@ -17,25 +21,57 @@ export class BookService {
     return book;
   }
 
-  async create(adminId: string, dto: CreateBookDto) {
+  async create(adminId: string, dto: CreateBookDto, image?: Express.Multer.File) {
+    let imageUrl = dto.imageUrl;
+
+    // Upload image if provided
+    if (image) {
+      imageUrl = await this.storageService.uploadFile(image, 'books');
+    }
+
     return this.prisma.book.create({
       data: {
         adminId,
         availableCopies: dto.totalCopies,
         ...dto,
+        imageUrl,
       },
     });
   }
 
-  async update(id: string, adminId: string, dto: EditBookDto) {
+  async update(id: string, adminId: string, dto: EditBookDto, image?: Express.Multer.File) {
     const book = await this.findOne(id);
     if (book.adminId !== adminId) throw new ForbiddenException('Only creator can edit');
-    return this.prisma.book.update({ where: { id }, data: { ...dto } });
+    
+    const updateData: any = { ...dto };
+
+    // Upload new image if provided
+    if (image) {
+      // Delete old image if exists
+      if (book.imageUrl) {
+        await this.storageService.deleteFileByUrl(book.imageUrl);
+      }
+      updateData.imageUrl = await this.storageService.uploadFile(image, 'books');
+    } else if (dto.imageUrl !== undefined) {
+      // If imageUrl is explicitly set in DTO (including null to remove), use it
+      updateData.imageUrl = dto.imageUrl;
+    }
+
+    return this.prisma.book.update({
+      where: { id },
+      data: updateData,
+    });
   }
 
   async remove(id: string, adminId: string) {
     const book = await this.findOne(id);
     if (book.adminId !== adminId) throw new ForbiddenException('Only creator can delete');
+    
+    // Delete image from storage if exists
+    if (book.imageUrl) {
+      await this.storageService.deleteFileByUrl(book.imageUrl);
+    }
+    
     await this.prisma.book.delete({ where: { id } });
     return { success: true };
   }

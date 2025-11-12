@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { BookService } from './book.service';
 import { CreateBookDto } from './dto/create-book.dto';
 import { EditBookDto } from './dto/edit-book.dto';
@@ -25,15 +26,26 @@ export class BookController {
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
   @Post()
-  create(@GetUser('id') adminId: string, @Body() dto: CreateBookDto) {
-    return this.service.create(adminId, dto);
+  @UseInterceptors(FileInterceptor('image'))
+  async create(
+    @GetUser('id') adminId: string,
+    @Body() dto: CreateBookDto,
+    @UploadedFile() image?: Express.Multer.File,
+  ) {
+    return this.service.create(adminId, dto, image);
   }
 
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
   @Patch(':id')
-  update(@Param('id') id: string, @GetUser('id') adminId: string, @Body() dto: EditBookDto) {
-    return this.service.update(id, adminId, dto);
+  @UseInterceptors(FileInterceptor('image'))
+  async update(
+    @Param('id') id: string,
+    @GetUser('id') adminId: string,
+    @Body() dto: EditBookDto,
+    @UploadedFile() image?: Express.Multer.File,
+  ) {
+    return this.service.update(id, adminId, dto, image);
   }
 
   @UseGuards(RolesGuard)

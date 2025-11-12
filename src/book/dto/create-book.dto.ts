@@ -20,6 +20,10 @@ export class CreateBookDto {
   @IsOptional()
   description?: string;
 
+  @IsString()
+  @IsOptional()
+  imageUrl?: string;
+
   @IsInt()
   @Min(0)
   totalCopies: number;

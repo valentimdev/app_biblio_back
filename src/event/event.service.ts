@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -43,46 +44,46 @@ export class EventService {
     });
   }
 
-async findAll() {
-  const events = await (this.prisma as any).event.findMany({
-    include: {
-      registrations: {
-        include: {
-          user: true
-        }
-      }
-    },
-    orderBy: { startTime: 'asc' },
-  });
-  
-  return events.map(event => ({
-    ...event,
-    registeredUsers: event.registrations.map(reg => reg.user),
-    registrations: undefined
-  }));
-}
+  async findAll() {
+    const events = await (this.prisma as any).event.findMany({
+      include: {
+        registrations: {
+          include: {
+            user: true,
+          },
+        },
+      },
+      orderBy: { startTime: 'asc' },
+    });
 
-async findOne(id: string) {
-  const event = await (this.prisma as any).event.findUnique({ 
-    where: { id },
-    include: {
-      registrations: {
-        include: {
-          user: true
-        }
-      }
-    }
-  });
-  if (!event) throw new NotFoundException('Evento não encontrado');
-  
-  const eventWithUsers = {
-    ...event,
-    registeredUsers: event.registrations.map(reg => reg.user),
-    registrations: undefined 
-  };
-  
-  return eventWithUsers;
-}
+    return events.map((event) => ({
+      ...event,
+      registeredUsers: event.registrations.map((reg) => reg.user),
+      registrations: undefined,
+    }));
+  }
+
+  async findOne(id: string) {
+    const event = await (this.prisma as any).event.findUnique({
+      where: { id },
+      include: {
+        registrations: {
+          include: {
+            user: true,
+          },
+        },
+      },
+    });
+    if (!event) throw new NotFoundException('Evento não encontrado');
+
+    const eventWithUsers = {
+      ...event,
+      registeredUsers: event.registrations.map((reg) => reg.user),
+      registrations: undefined,
+    };
+
+    return eventWithUsers;
+  }
 
   async update(
     id: string,
@@ -138,19 +139,51 @@ async findOne(id: string) {
   }
 
   async register(userId: string, eventId: string) {
-    await this.findOne(eventId);
-    return (this.prisma as any).eventRegistration.create({
-      data: {
-        userId,
-        eventId,
-      },
+    const event = await this.findOne(eventId);
+
+    if (event.isDisabled) {
+      throw new BadRequestException('Evento desabilitado');
+    }
+
+    if (
+      event.isFull ||
+      (event.seats && event.registeredUsers.length >= event.seats)
+    ) {
+      throw new BadRequestException('Evento lotado - não há vagas disponíveis');
+    }
+
+    const registration = await (this.prisma as any).eventRegistration.create({
+      data: { userId, eventId },
     });
+
+    if (event.seats && event.registeredUsers.length + 1 >= event.seats) {
+      await (this.prisma as any).event.update({
+        where: { id: eventId },
+        data: { isFull: true },
+      });
+    }
+
+    return registration;
   }
 
   async unregister(userId: string, eventId: string) {
+    const event = await this.findOne(eventId);
+
     await (this.prisma as any).eventRegistration.delete({
       where: { userId_eventId: { userId, eventId } },
     });
+
+    if (
+      event.isFull &&
+      event.seats &&
+      event.registeredUsers.length <= event.seats
+    ) {
+      await (this.prisma as any).event.update({
+        where: { id: eventId },
+        data: { isFull: false },
+      });
+    }
+
     return { success: true };
   }
 

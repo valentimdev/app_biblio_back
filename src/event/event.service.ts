@@ -1,4 +1,9 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { StorageService } from 'src/storage/storage.service';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -11,7 +16,11 @@ export class EventService {
     private readonly storageService: StorageService,
   ) {}
 
-  async create(adminId: string, dto: CreateEventDto, image?: Express.Multer.File) {
+  async create(
+    adminId: string,
+    dto: CreateEventDto,
+    image?: Express.Multer.File,
+  ) {
     let imageUrl = dto.imageUrl;
 
     // Upload image if provided
@@ -36,21 +45,57 @@ export class EventService {
   }
 
   async findAll() {
-    return (this.prisma as any).event.findMany({
+    const events = await (this.prisma as any).event.findMany({
+      include: {
+        registrations: {
+          include: {
+            user: true,
+          },
+        },
+      },
       orderBy: { startTime: 'asc' },
     });
+
+    return events.map((event) => ({
+      ...event,
+      registeredUsers: event.registrations.map((reg) => reg.user),
+      registrations: undefined,
+    }));
   }
 
   async findOne(id: string) {
-    const event = await (this.prisma as any).event.findUnique({ where: { id } });
+    const event = await (this.prisma as any).event.findUnique({
+      where: { id },
+      include: {
+        registrations: {
+          include: {
+            user: true,
+          },
+        },
+      },
+    });
     if (!event) throw new NotFoundException('Evento não encontrado');
-    return event;
+
+    const eventWithUsers = {
+      ...event,
+      registeredUsers: event.registrations.map((reg) => reg.user),
+      registrations: undefined,
+    };
+
+    return eventWithUsers;
   }
 
-  async update(id: string, adminId: string, dto: UpdateEventDto, image?: Express.Multer.File) {
+  async update(
+    id: string,
+    adminId: string,
+    dto: UpdateEventDto,
+    image?: Express.Multer.File,
+  ) {
     const event = await this.findOne(id);
     if (event.adminId !== adminId) {
-      throw new ForbiddenException('Apenas o admin criador pode editar este evento');
+      throw new ForbiddenException(
+        'Apenas o admin criador pode editar este evento',
+      );
     }
 
     const updateData: any = { ...dto };
@@ -61,7 +106,10 @@ export class EventService {
       if (event.imageUrl) {
         await this.storageService.deleteFileByUrl(event.imageUrl);
       }
-      updateData.imageUrl = await this.storageService.uploadFile(image, 'events');
+      updateData.imageUrl = await this.storageService.uploadFile(
+        image,
+        'events',
+      );
     } else if (dto.imageUrl !== undefined) {
       // If imageUrl is explicitly set in DTO (including null to remove), use it
       updateData.imageUrl = dto.imageUrl;
@@ -76,7 +124,9 @@ export class EventService {
   async remove(id: string, adminId: string) {
     const event = await this.findOne(id);
     if (event.adminId !== adminId) {
-      throw new ForbiddenException('Apenas o admin criador pode excluir este evento');
+      throw new ForbiddenException(
+        'Apenas o admin criador pode excluir este evento',
+      );
     }
 
     // Delete image from storage if exists
@@ -89,19 +139,51 @@ export class EventService {
   }
 
   async register(userId: string, eventId: string) {
-    await this.findOne(eventId);
-    return (this.prisma as any).eventRegistration.create({
-      data: {
-        userId,
-        eventId,
-      },
+    const event = await this.findOne(eventId);
+
+    if (event.isDisabled) {
+      throw new BadRequestException('Evento desabilitado');
+    }
+
+    if (
+      event.isFull ||
+      (event.seats && event.registeredUsers.length >= event.seats)
+    ) {
+      throw new BadRequestException('Evento lotado - não há vagas disponíveis');
+    }
+
+    const registration = await (this.prisma as any).eventRegistration.create({
+      data: { userId, eventId },
     });
+
+    if (event.seats && event.registeredUsers.length + 1 >= event.seats) {
+      await (this.prisma as any).event.update({
+        where: { id: eventId },
+        data: { isFull: true },
+      });
+    }
+
+    return registration;
   }
 
   async unregister(userId: string, eventId: string) {
+    const event = await this.findOne(eventId);
+
     await (this.prisma as any).eventRegistration.delete({
       where: { userId_eventId: { userId, eventId } },
     });
+
+    if (
+      event.isFull &&
+      event.seats &&
+      event.registeredUsers.length <= event.seats
+    ) {
+      await (this.prisma as any).event.update({
+        where: { id: eventId },
+        data: { isFull: false },
+      });
+    }
+
     return { success: true };
   }
 
@@ -113,6 +195,25 @@ export class EventService {
       orderBy: { registeredAt: 'asc' },
     });
   }
+
+  async getMyEvents(userId: string) {
+    const registrations = await (this.prisma as any).eventRegistration.findMany(
+      {
+        where: {
+          userId: userId,
+        },
+        include: {
+          event: true,
+        },
+        orderBy: {
+          registeredAt: 'desc',
+        },
+      },
+    );
+
+    return registrations.map((registration) => ({
+      ...registration.event,
+      registeredAt: registration.registeredAt,
+    }));
+  }
 }
-
-

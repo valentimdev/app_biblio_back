@@ -4,21 +4,24 @@ import { JwtGuard } from 'src/auth/guard/jwt.guard';
 import { EditUserDto } from './dto/edit-user.dto';
 import { UserService } from './user.service';
 import { BookService } from 'src/book/book.service';
-
+import { EventService } from 'src/event/event.service';
 @UseGuards(JwtGuard)
 @Controller('users')
 export class UserController {
   constructor(
     private userService: UserService,
     private bookService: BookService,
+    private eventService: EventService,
   ) {}
   @Get('me')
   async getMe(@GetUser() user: any) {
     const rentals = await this.bookService.getMyRentals(user.id);
+    const events = await this.eventService.getMyEvents(user.id);
 
     return {
       ...user,
       rentals: rentals,
+      events: events,
     };
   }
 

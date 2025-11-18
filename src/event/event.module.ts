@@ -7,7 +7,6 @@ import { StorageModule } from '../storage/storage.module';
   imports: [StorageModule],
   controllers: [EventController],
   providers: [EventService],
+  exports: [EventService],
 })
 export class EventModule {}
-
-

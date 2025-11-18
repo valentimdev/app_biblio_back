@@ -6,6 +6,7 @@ import { StorageModule } from '../storage/storage.module';
 @Module({
   imports: [StorageModule],
   providers: [BookService],
-  controllers: [BookController]
+  controllers: [BookController],
+  exports: [BookService],
 })
 export class BookModule {}

@@ -72,6 +72,12 @@ export class EventController {
   registrations(@Param('id') id: string) {
     return this.eventService.listRegistrations(id);
   }
+
+  @UseGuards(JwtGuard)
+  @Get(':id/status')
+  getEventWithStatus(@Param('id') id: string, @GetUser('id') userId: string) {
+    return this.eventService.getEventWithRegistrationStatus(id, userId);
+  }
 }
 
 

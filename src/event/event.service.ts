@@ -216,4 +216,25 @@ export class EventService {
       registeredAt: registration.registeredAt,
     }));
   }
+    async getEventWithRegistrationStatus(eventId: string, userId: string) {
+    const event = await this.findOne(eventId);
+
+    // Verifica se o usuário está inscrito neste evento
+    const userRegistration = await this.prisma.eventRegistration.findUnique({
+      where: {
+        userId_eventId: {
+          userId,
+          eventId,
+        },
+      },
+    });
+
+    return {
+      ...event,
+      isRegisteredByUser: !!userRegistration,
+      registrationInfo: userRegistration ? {
+        registeredAt: userRegistration.registeredAt,
+      } : null,
+    };
+  }
 }

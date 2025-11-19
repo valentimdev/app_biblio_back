@@ -37,4 +37,11 @@ export class UserController {
   ) {
     return this.userService.editUser(userId, dto, image);
   }
+
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  @Get()
+  findAll() {
+    return this.userService.findAll();
+  }
 }

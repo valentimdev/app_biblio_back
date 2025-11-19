@@ -6,6 +6,8 @@ import { EditUserDto } from './dto/edit-user.dto';
 import { UserService } from './user.service';
 import { BookService } from 'src/book/book.service';
 import { EventService } from 'src/event/event.service';
+import { RolesGuard } from 'src/auth/guard/roles.guard';
+import { Roles } from 'src/auth/decorator/roles.decorator';
 
 @UseGuards(JwtGuard)
 @Controller('users')

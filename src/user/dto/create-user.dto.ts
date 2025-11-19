@@ -1,4 +1,4 @@
-import { RoleEnum } from '@prisma/client';
+import { RoleEnum, UserStatus } from '@prisma/client';
 import {
   IsEmail,
   IsEnum,
@@ -35,4 +35,8 @@ export class CreateUserDto {
   @IsString()
   @IsOptional()
   imageUrl?: string;
+
+  @IsEnum(UserStatus)
+  @IsOptional()
+  status?: UserStatus;
 }

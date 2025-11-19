@@ -153,5 +153,40 @@ export class NotificationService {
       },
     });
   }
+
+  async notifyBookRental(
+    userId: string,
+    book: { id: string; title: string },
+    dueDate: Date,
+  ) {
+    const readableDate = new Intl.DateTimeFormat('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    }).format(dueDate);
+
+    return this.create({
+      userId,
+      title: 'Livro alugado com sucesso',
+      message: `Você alugou "${book.title}". Devolva até ${readableDate}.`,
+      type: NotificationType.BOOK_RENTAL,
+      data: {
+        bookId: book.id,
+        dueDate,
+      },
+    });
+  }
+
+  async notifyBookReturn(userId: string, book: { id: string; title: string }) {
+    return this.create({
+      userId,
+      title: 'Livro devolvido',
+      message: `Recebemos a devolução do livro "${book.title}". Obrigado!`,
+      type: NotificationType.BOOK_RENTAL,
+      data: {
+        bookId: book.id,
+      },
+    });
+  }
 }
 

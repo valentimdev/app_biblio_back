@@ -1,5 +1,5 @@
-import { User, RoleEnum } from '@prisma/client';
-import { Injectable } from '@nestjs/common';
+import { User, RoleEnum, UserStatus } from '@prisma/client';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { EditUserDto } from './dto/edit-user.dto';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -46,11 +46,12 @@ export class UserService {
                     name: dto.name,
                     matricula: dto.matricula,
                     role: dto.role,
+                    status: dto.status ?? UserStatus.ACTIVE,
                 },
             });
 
             const { passwordHash, ...result } = user;
-            return user;
+            return result;
         } catch (error) {
             if (error instanceof PrismaClientKnownRequestError) {
                 if (error.code === 'P2002') {
@@ -71,6 +72,7 @@ export class UserService {
                 matricula: true,
                 role: true,
                 imageUrl: true,
+                status: true,
                 createdAt: true,
                 updatedAt: true,
             },
@@ -79,5 +81,27 @@ export class UserService {
             }
         });
         return users;
+    }
+
+    async updateStatus(userId: string, status: UserStatus) {
+        const user = await this.prisma.user.findUnique({ where: { id: userId } });
+        if (!user) {
+            throw new NotFoundException('Usuário não encontrado');
+        }
+        const updated = await this.prisma.user.update({
+            where: { id: userId },
+            data: { status },
+            select: {
+                id: true,
+                email: true,
+                name: true,
+                matricula: true,
+                role: true,
+                status: true,
+                imageUrl: true,
+                updatedAt: true,
+            },
+        });
+        return updated;
     }
 }

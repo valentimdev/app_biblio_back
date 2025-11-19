@@ -6,7 +6,7 @@ import { PrismaClientKnownRequestError } from "@prisma/client/runtime/binary";
 import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import { ChangePasswordDto } from './dto/password.dto';
-import { RoleEnum } from "@prisma/client";
+import { RoleEnum, UserStatus } from "@prisma/client";
 @Injectable()
 export class AuthService {
     constructor(private prisma:PrismaService,private jwt:JwtService, private config:ConfigService){}
@@ -25,7 +25,7 @@ export class AuthService {
                 // role padrão USER no schema
             },
         });
-        return this.signToken(user.id, user.email,user.role);
+        return this.signToken(user.id, user.email,user.role, user.status);
     }
         catch(error){
             if (error instanceof PrismaClientKnownRequestError) {
@@ -45,26 +45,32 @@ export class AuthService {
         );
         //se nao encontrar, lancar excecao
         if(!user) throw new ForbiddenException('Credenciais incorretas');
+        if(user.status === UserStatus.BANNED){
+            throw new ForbiddenException('Usuário banido');
+        }
         //se encontrar, verificar se o password esta correto
         const isPasswordValid = await argon.verify(user.passwordHash, dto.password);
         //se o password estiver incorreto, lancar excecao
         if(!isPasswordValid) throw new ForbiddenException('Credenciais incorretas'); 
-        const tokenData = await this.signToken(user.id, user.matricula, user.role);
+        const tokenData = await this.signToken(user.id, user.matricula, user.role, user.status);
         return {
         access_token: tokenData.access_token,
-        role: user.role                     
+        role: user.role,
+        status: user.status,
     };
     }
 
     async signToken(
         userId : string,
         matricula: string,
-        role : RoleEnum
+        role : RoleEnum,
+        status: UserStatus,
     ): Promise<{ access_token: string }> {
         const payload = {
             sub: userId,
             matricula:matricula,
-            role:role
+            role:role,
+            status,
         }
         const secret = this.config.get('JWT_SECRET');
 

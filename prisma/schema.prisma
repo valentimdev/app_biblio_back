@@ -13,6 +13,11 @@ enum RoleEnum {
   USER
 }
 
+enum UserStatus {
+  ACTIVE
+  BANNED
+}
+
 enum NotificationType {
   GENERIC
   EVENT_REGISTRATION
@@ -32,6 +37,7 @@ model User {
   passwordHash String   @map("password")
   role         RoleEnum @default(USER)
   imageUrl     String?  @map("image_url")
+  status       UserStatus @default(ACTIVE)
 
   // Relations
   events        Event[]           @relation("UserEvents") // events created by admin

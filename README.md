@@ -29,6 +29,8 @@ API NestJS para gestão de usuários e eventos (CRUD completo), com autenticaç�
 
 - **NestJS 11**, **TypeScript**, **Prisma** (PostgreSQL), **JWT**, **argon2**
 - Validação com `class-validator`, Guards de `JWT` e `Roles`
+- Sistema de notificações persistentes (filtro por lidas/não lidas)
+- Usuários com status `ACTIVE` (liberado) ou `BANNED` (bloqueado)
 
 ## Setup do projeto
 
@@ -55,7 +57,7 @@ $ npm run start:prod
 2) Rode as migrações e gere o client:
 
 ```bash
-npx prisma migrate dev --name init_events_roles
+npx prisma migrate dev
 npx prisma generate
 ```
 
@@ -76,6 +78,8 @@ npm run db:seed
 - Usuário
   - GET `/users/me` (JWT)
   - PATCH `/users` (JWT)
+  - GET `/users` (JWT + ADMIN)
+  - PATCH `/users/:id/status` (JWT + ADMIN) → altera status para `ACTIVE`/`BANNED`
 - Home
   - GET `/home`  → próximos eventos
 - Eventos
@@ -87,6 +91,11 @@ npm run db:seed
   - POST `/events/:id/register` (JWT)
   - DELETE `/events/:id/register` (JWT)
   - GET `/events/:id/registrations` (JWT + ADMIN)
+- Notificações
+  - GET `/notifications` (JWT, suporta `status=all|unread`, `page`, `limit`)
+  - PATCH `/notifications/:id/read` (JWT)
+  - PATCH `/notifications/read-all` (JWT)
+  - POST `/notifications` (JWT + ADMIN) → dispara notificação manual para um usuário
 
 ## Modelos de Dados (Prisma)
 
@@ -97,6 +106,7 @@ erDiagram
   User ||--o{ Event : "cria (adminId)"
   User ||--o{ EventRegistration : "inscreve"
   Event ||--o{ EventRegistration : "tem inscrições"
+  User ||--o{ Notification : "recebe"
 
   User {
     string id PK
@@ -105,6 +115,7 @@ erDiagram
     string matricula UK
     string passwordHash
     enum RoleEnum
+    enum UserStatus
     datetime createdAt
     datetime updatedAt
   }
@@ -126,6 +137,16 @@ erDiagram
     string eventId FK -> Event.id
     datetime registeredAt
     PK "userId,eventId"
+  }
+
+  Notification {
+    string id PK
+    string userId FK -> User.id
+    string title
+    string message
+    enum NotificationType
+    datetime createdAt
+    datetime readAt
   }
 ```
 

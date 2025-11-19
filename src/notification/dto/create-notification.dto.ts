@@ -1,4 +1,4 @@
-import { NotificationType } from '@prisma/client';
+import { NotificationType, Prisma } from '@prisma/client';
 import {
   IsEnum,
   IsNotEmpty,
@@ -26,6 +26,6 @@ export class CreateNotificationDto {
   type?: NotificationType;
 
   @IsOptional()
-  data?: Record<string, unknown>;
+  data?: Prisma.JsonValue;
 }
 

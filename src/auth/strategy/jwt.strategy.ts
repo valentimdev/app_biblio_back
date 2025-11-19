@@ -1,4 +1,4 @@
-import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import { Inject, Injectable, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
@@ -19,7 +19,9 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   }
   async validate(payload: {
     sub: string;
-    email: string;
+    matricula?: string;
+    role?: string;
+    status?: string;
   }) {
     const user = await this.prisma.user.findUnique({
       where: {
@@ -29,6 +31,10 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
 
     if (!user) {
       throw new UnauthorizedException('User not found');
+    }
+
+    if (user.status === 'BANNED') {
+      throw new ForbiddenException('Usuário banido');
     }
 
     const { passwordHash, ...result } = user as any;

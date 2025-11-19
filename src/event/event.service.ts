@@ -8,12 +8,14 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { StorageService } from 'src/storage/storage.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
+import { NotificationService } from 'src/notification/notification.service';
 
 @Injectable()
 export class EventService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storageService: StorageService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async create(
@@ -115,10 +117,29 @@ export class EventService {
       updateData.imageUrl = dto.imageUrl;
     }
 
-    return (this.prisma as any).event.update({
+    const updatedEvent = await (this.prisma as any).event.update({
       where: { id },
       data: updateData,
     });
+
+    if (
+      dto.isDisabled !== undefined &&
+      dto.isDisabled !== event.isDisabled
+    ) {
+      const registrations = await this.prisma.eventRegistration.findMany({
+        where: { eventId: id },
+        select: { userId: true },
+      });
+      if (registrations.length) {
+        await this.notificationService.notifyEventStatusChange(
+          registrations.map((reg) => reg.userId),
+          { id, title: updatedEvent.title },
+          updatedEvent.isDisabled ? 'desabilitado' : 'reabilitado',
+        );
+      }
+    }
+
+    return updatedEvent;
   }
 
   async remove(id: string, adminId: string) {
@@ -134,7 +155,20 @@ export class EventService {
       await this.storageService.deleteFileByUrl(event.imageUrl);
     }
 
+    const registrations = await this.prisma.eventRegistration.findMany({
+      where: { eventId: id },
+      select: { userId: true },
+    });
+
     await (this.prisma as any).event.delete({ where: { id } });
+
+    if (registrations.length) {
+      await this.notificationService.notifyEventStatusChange(
+        registrations.map((reg) => reg.userId),
+        { id, title: event.title },
+        'cancelado',
+      );
+    }
     return { success: true };
   }
 
@@ -156,6 +190,12 @@ export class EventService {
       data: { userId, eventId },
     });
 
+    await this.notificationService.notifyEventRegistration(userId, {
+      id: eventId,
+      title: event.title,
+      startTime: event.startTime,
+    });
+
     if (event.seats && event.registeredUsers.length + 1 >= event.seats) {
       await (this.prisma as any).event.update({
         where: { id: eventId },
@@ -171,6 +211,11 @@ export class EventService {
 
     await (this.prisma as any).eventRegistration.delete({
       where: { userId_eventId: { userId, eventId } },
+    });
+
+    await this.notificationService.notifyEventUnregistration(userId, {
+      id: eventId,
+      title: event.title,
     });
 
     if (

@@ -13,6 +13,19 @@ enum RoleEnum {
   USER
 }
 
+enum UserStatus {
+  ACTIVE
+  BANNED
+}
+
+enum NotificationType {
+  GENERIC
+  EVENT_REGISTRATION
+  EVENT_STATUS
+  EVENT_REMINDER
+  BOOK_RENTAL
+}
+
 model User {
   id           String   @id @default(uuid())
   createdAt    DateTime @default(now()) @map("created_at")
@@ -24,12 +37,14 @@ model User {
   passwordHash String   @map("password")
   role         RoleEnum @default(USER)
   imageUrl     String?  @map("image_url")
+  status       UserStatus @default(ACTIVE)
 
   // Relations
   events        Event[]           @relation("UserEvents") // events created by admin
   registrations EventRegistration[]
   books         Book[]            
   rentals       Rental[]
+  notifications Notification[]
 
   @@map("users")
 }
@@ -100,4 +115,21 @@ model EventRegistration {
 
   @@id([userId, eventId])
   @@map("event_registrations")
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String           @map("user_id")
+  title     String
+  message   String
+  type      NotificationType @default(GENERIC)
+  data      Json?
+  readAt    DateTime?        @map("read_at")
+  createdAt DateTime         @default(now()) @map("created_at")
+  updatedAt DateTime         @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, readAt])
+  @@map("notifications")
 }

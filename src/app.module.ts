@@ -8,8 +8,9 @@ import { HomeModule } from './home/home.module';
 import { BookModule } from './book/book.module';
 import { ChatModule } from './chat/chat.module';
 import { StorageModule } from './storage/storage.module';
+import { NotificationModule } from './notification/notification.module';
   
 @Module({
-  imports: [AuthModule, UserModule, EventModule, HomeModule, PrismaModule, ConfigModule.forRoot({isGlobal:true}), BookModule, ChatModule, StorageModule],
+  imports: [AuthModule, UserModule, EventModule, HomeModule, PrismaModule, ConfigModule.forRoot({isGlobal:true}), BookModule, ChatModule, StorageModule, NotificationModule],
 })
 export class AppModule {}

@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { StorageService } from 'src/storage/storage.service';
+import { NotificationService } from 'src/notification/notification.service';
 import { CreateBookDto } from './dto/create-book.dto';
 import { EditBookDto } from './dto/edit-book.dto';
 
@@ -9,6 +10,7 @@ export class BookService {
   constructor(
     private prisma: PrismaService,
     private storageService: StorageService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async findAll() {

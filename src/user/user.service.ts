@@ -6,20 +6,43 @@ import { CreateUserDto } from './dto/create-user.dto';
 import * as argon from 'argon2';
 import { ForbiddenException } from '@nestjs/common/exceptions';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { StorageService } from 'src/storage/storage.service'; 
+
 @Injectable()
 export class UserService {
-    constructor(private prisma:PrismaService){}
-    async editUser(userId:string, dto:EditUserDto){
+    constructor(
+        private prisma: PrismaService,
+        private storageService: StorageService
+    ){}
+
+    async editUser(userId: string, dto: EditUserDto, image?: Express.Multer.File) {
+        let imageUrl: string | undefined;
+
+        if (image) {
+            imageUrl = await this.storageService.uploadFile(image, 'users');
+        }
+
         const user = await this.prisma.user.update({
-            where:{
-                id:userId
+            where: {
+                id: userId
             },
-            data:{
+            data: {
                 ...dto,
+                ...(imageUrl && { imageUrl }),
             }
         });
+
         const { passwordHash, ...userWithoutHash } = user;
         return userWithoutHash;
+    }
+
+        const { passwordHash, ...userWithoutHash } = user;
+        return userWithoutHash;
+    }
+
+    private async uploadImage(image: Express.Multer.File): Promise<string> {
+        const result = await this.cloudinary.uploadImage(image);
+        return result.secure_url;
     }
 
     async createUser(dto: CreateUserDto): Promise<Omit<User, 'passwordHash'>> {

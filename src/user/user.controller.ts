@@ -1,10 +1,14 @@
-import { Body, Controller, Get, Patch, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Req, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { GetUser } from 'src/auth/decorator/get-user.decorator';
 import { JwtGuard } from 'src/auth/guard/jwt.guard';
 import { EditUserDto } from './dto/edit-user.dto';
 import { UserService } from './user.service';
 import { BookService } from 'src/book/book.service';
 import { EventService } from 'src/event/event.service';
+import { RolesGuard } from 'src/auth/guard/roles.guard';
+import { Roles } from 'src/auth/decorator/roles.decorator';
+
 @UseGuards(JwtGuard)
 @Controller('users')
 export class UserController {
@@ -13,6 +17,7 @@ export class UserController {
     private bookService: BookService,
     private eventService: EventService,
   ) {}
+
   @Get('me')
   async getMe(@GetUser() user: any) {
     const rentals = await this.bookService.getMyRentals(user.id);
@@ -26,7 +31,19 @@ export class UserController {
   }
 
   @Patch()
-  editUser(@GetUser('id') userId: string, @Body() dto: EditUserDto) {
-    return this.userService.editUser(userId, dto);
+  @UseInterceptors(FileInterceptor('image'))
+  editUser(
+    @GetUser('id') userId: string,
+    @Body() dto: EditUserDto,
+    @UploadedFile() image?: Express.Multer.File
+  ) {
+    return this.userService.editUser(userId, dto, image);
+  }
+
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  @Get()
+  findAll() {
+    return this.userService.findAll();
   }
 }

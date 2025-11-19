@@ -34,7 +34,10 @@ export class BookController {
   ) {
     return this.service.create(adminId, dto, image);
   }
-
+  @Get(':id/status')
+  getBookWithStatus(@Param('id') id: string, @GetUser('id') userId: string) {
+    return this.service.getBookWithRentalStatus(id, userId);
+  }
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
   @Patch(':id')

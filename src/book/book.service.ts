@@ -42,7 +42,7 @@ export class BookService {
   async update(id: string, adminId: string, dto: EditBookDto, image?: Express.Multer.File) {
     const book = await this.findOne(id);
     if (book.adminId !== adminId) throw new ForbiddenException('Only creator can edit');
-    
+
     const updateData: any = { ...dto };
 
     // Upload new image if provided
@@ -66,16 +66,16 @@ export class BookService {
   async remove(id: string, adminId: string) {
     const book = await this.findOne(id);
     if (book.adminId !== adminId) throw new ForbiddenException('Only creator can delete');
-    
+
     // Delete image from storage if exists
     if (book.imageUrl) {
       await this.storageService.deleteFileByUrl(book.imageUrl);
     }
-    
+
     await this.prisma.book.delete({ where: { id } });
     return { success: true };
   }
-  
+
   async returnBook(userId: string, bookId: string) {
     const rental = await this.prisma.rental.findFirst({
       where: { userId, bookId, returnDate: null },
@@ -91,7 +91,7 @@ export class BookService {
     });
     return { success: true };
   }
-  
+
 async rentBook(userId: string, bookId: string, dueDate: Date) {
   console.log('rentBook chamado:', { userId, bookId, dueDate });
 
@@ -127,6 +127,30 @@ async rentBook(userId: string, bookId: string, dueDate: Date) {
   console.log('Rental criado:', rental);
   return { success: true };
 }
+
+    async getBookWithRentalStatus(bookId: string, userId: string) {
+    const book = await this.findOne(bookId);
+
+   
+    const activeRental = await this.prisma.rental.findFirst({
+      where: {
+        bookId,
+        userId,
+        returnDate: null,
+      },
+    });
+
+    return {
+      ...book,
+      isRentedByUser: !!activeRental,
+      rentalInfo: activeRental ? {
+        rentalDate: activeRental.rentalDate,
+        dueDate: activeRental.dueDate,
+        isOverdue: new Date() > activeRental.dueDate,
+      } : null,
+    };
+  }
+
   async getMyRentals(userId: string) {
     const rentals = await this.prisma.rental.findMany({
       where: {
@@ -136,7 +160,7 @@ async rentBook(userId: string, bookId: string, dueDate: Date) {
         book: true,
       },
       orderBy: {
-        rentalDate: 'desc', 
+        rentalDate: 'desc',
       },
     });
     return rentals;

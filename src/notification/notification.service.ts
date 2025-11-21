@@ -11,7 +11,7 @@ interface CreateNotificationInput {
   title: string;
   message: string;
   type?: NotificationType;
-  data?: Prisma.JsonValue;
+  data?: Prisma.InputJsonValue | null;
 }
 
 @Injectable()
@@ -25,7 +25,7 @@ export class NotificationService {
         title: input.title,
         message: input.message,
         type: input.type ?? NotificationType.GENERIC,
-        data: input.data,
+        data: input.data ?? undefined,
       },
     });
   }
@@ -122,7 +122,7 @@ export class NotificationService {
       type: NotificationType.EVENT_REGISTRATION,
       data: {
         eventId: event.id,
-        startTime: event.startTime,
+        startTime: event.startTime.toISOString(),
       },
     });
   }
@@ -172,7 +172,7 @@ export class NotificationService {
       type: NotificationType.BOOK_RENTAL,
       data: {
         bookId: book.id,
-        dueDate,
+        dueDate: dueDate.toISOString(),
       },
     });
   }

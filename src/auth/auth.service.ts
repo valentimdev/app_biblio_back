@@ -24,6 +24,12 @@ export class AuthService {
                 matricula: dto.matricula,
                 // role padrão USER no schema
             },
+            select: {
+                id: true,
+                email: true,
+                role: true,
+                status: true,
+            },
         });
         return this.signToken(user.id, user.email,user.role, user.status);
     }
@@ -40,9 +46,16 @@ export class AuthService {
     async signin(dto:LoginDto){
         //encontrar o usuario por email
         const user = await this.prisma.user.findUnique({
-            where:{matricula: dto.matricula}
-        },
-        );
+            where:{matricula: dto.matricula},
+            select: {
+                id: true,
+                email: true,
+                matricula: true,
+                passwordHash: true,
+                role: true,
+                status: true,
+            },
+        });
         //se nao encontrar, lancar excecao
         if(!user) throw new ForbiddenException('Credenciais incorretas');
         if(user.status === UserStatus.BANNED){

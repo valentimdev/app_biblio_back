@@ -26,6 +26,6 @@ export class CreateNotificationDto {
   type?: NotificationType;
 
   @IsOptional()
-  data?: Prisma.JsonValue;
+  data?: Prisma.InputJsonValue | null;
 }
 

@@ -20,15 +20,21 @@ export class StorageService {
     this.containerName = containerName;
     this.containerClient = this.blobServiceClient.getContainerClient(containerName);
     
-    // Ensure container exists
-    this.ensureContainerExists();
+    // Ensure container exists (fire and forget)
+    this.ensureContainerExists().catch((error) => {
+      console.error('Failed to ensure container exists:', error);
+    });
   }
 
   private async ensureContainerExists() {
     try {
-      await this.containerClient.createIfNotExists({
-        access: 'blob', // Public read access
-      });
+      const containerExists = await this.containerClient.exists();
+      if (!containerExists) {
+        await this.containerClient.create({
+          access: 'blob', // Public read access for blobs
+        });
+        console.log(`Container '${this.containerName}' created successfully`);
+      }
     } catch (error) {
       console.error('Error creating container:', error);
     }
@@ -106,6 +112,30 @@ export class StorageService {
       return;
     }
     await this.deleteFile(imageUrl);
+  }
+
+  async getFileUrl(blobName: string): Promise<string> {
+    const blockBlobClient = this.containerClient.getBlockBlobClient(blobName);
+    return blockBlobClient.url;
+  }
+
+  async downloadFile(blobName: string): Promise<Buffer> {
+    try {
+      const blockBlobClient = this.containerClient.getBlockBlobClient(blobName);
+      const downloadResponse = await blockBlobClient.download(0);
+      const chunks: Buffer[] = [];
+      
+      if (downloadResponse.readableStreamBody) {
+        for await (const chunk of downloadResponse.readableStreamBody) {
+          chunks.push(Buffer.from(chunk));
+        }
+      }
+      
+      return Buffer.concat(chunks);
+    } catch (error) {
+      console.error('Error downloading file from Azure:', error);
+      throw new Error('Failed to download file');
+    }
   }
 }
 

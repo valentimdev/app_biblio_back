@@ -93,3 +93,57 @@ Content-Type: multipart/form-data
 - Tamanho máximo: 5MB por arquivo
 - Apenas imagens são permitidas
 
+## Configuração de CORS no Azure Storage
+
+Para que o frontend possa acessar as imagens diretamente do Azure Blob Storage, é necessário configurar CORS:
+
+### Via Portal do Azure:
+
+1. Acesse o [Portal do Azure](https://portal.azure.com)
+2. Navegue até sua conta de Storage
+3. No menu lateral, vá em "Configurações" > "CORS"
+4. Configure as seguintes regras para **Blob service**:
+
+**Allowed origins**: `*` (ou especifique o domínio do seu frontend)
+**Allowed methods**: `GET`, `HEAD`, `OPTIONS`
+**Allowed headers**: `*`
+**Exposed headers**: `*`
+**Max age**: `3600`
+
+### Via Azure CLI:
+
+```bash
+az storage cors add \
+  --services b \
+  --methods GET HEAD OPTIONS \
+  --origins "*" \
+  --allowed-headers "*" \
+  --exposed-headers "*" \
+  --max-age 3600 \
+  --account-name SEU_ACCOUNT_NAME \
+  --account-key SUA_ACCOUNT_KEY
+```
+
+### Verificar se o Container está Público:
+
+1. No Portal do Azure, vá até seu Storage Account
+2. Clique em "Containers" no menu lateral
+3. Selecione o container (ex: `images`)
+4. Vá em "Change access level"
+5. Certifique-se de que está configurado como **Blob (anonymous read access for blobs only)**
+
+## Solução Alternativa: Proxy de Imagens
+
+Se o CORS do Azure Storage continuar causando problemas, você pode usar o endpoint proxy do backend:
+
+```
+GET /storage/proxy/:folder/:filename
+```
+
+Exemplo:
+```
+GET /storage/proxy/books/1234567890-abc123.jpg
+```
+
+Este endpoint serve as imagens através do backend, evitando problemas de CORS.
+

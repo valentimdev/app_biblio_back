@@ -81,6 +81,7 @@ export class BookService {
   async returnBook(userId: string, bookId: string) {
     const rental = await this.prisma.rental.findFirst({
       where: { userId, bookId, returnDate: null },
+      include: { book: true },
     });
     if (!rental) throw new NotFoundException('Rental not found');
     await this.prisma.rental.update({
@@ -91,6 +92,13 @@ export class BookService {
       where: { id: bookId },
       data: { availableCopies: { increment: 1 } as any },
     });
+    
+    // Notify user about the return
+    await this.notificationService.notifyBookReturn(userId, {
+      id: rental.book.id,
+      title: rental.book.title,
+    });
+    
     return { success: true };
   }
 
@@ -125,6 +133,12 @@ async rentBook(userId: string, bookId: string, dueDate: Date) {
       dueDate,
     },
   });
+
+  // Notify user about the rental
+  await this.notificationService.notifyBookRental(userId, {
+    id: book.id,
+    title: book.title,
+  }, dueDate);
 
   console.log('Rental criado:', rental);
   return { success: true };

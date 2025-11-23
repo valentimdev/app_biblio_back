@@ -113,4 +113,63 @@ export class UserService {
         };
     }
 
+        async getDashboardStats() {
+
+        const totalUsers = await this.prisma.user.count({
+            where: {
+                role: 'USER'
+            }
+        });
+
+        const totalBooks = await this.prisma.book.count();
+
+
+        const totalRentedBooks = await this.prisma.rental.count({
+            where: {
+                returnDate: null
+            }
+        });
+
+        const topRentedBooks = await this.prisma.rental.groupBy({
+            by: ['bookId'],
+            _count: {
+                bookId: true
+            },
+            orderBy: {
+                _count: {
+                    bookId: 'desc'
+                }
+            },
+            take: 5
+        });
+
+        const topBooksWithInfo = await Promise.all(
+            topRentedBooks.map(async (rental) => {
+                const book = await this.prisma.book.findUnique({
+                    where: { id: rental.bookId },
+                    select: {
+                        id: true,
+                        title: true,
+                        author: true,
+                        imageUrl: true,
+                        isbn: true
+                    }
+                });
+                return {
+                    ...book,
+                    totalRentals: rental._count.bookId
+                };
+            })
+        );
+
+        return {
+            totalUsers,
+            totalBooks,
+            totalRentedBooks,
+            availableBooks: totalBooks - totalRentedBooks,
+            topRentedBooks: topBooksWithInfo
+        };
+    }
+
+
 }

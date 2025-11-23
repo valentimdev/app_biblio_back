@@ -54,4 +54,11 @@ export class UserController {
   toggleStatus(@Param('id') id: string) {
     return this.userService.toggleStatus(id);
   }
+
+    @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  @Get('dashboard')
+  getDashboardStats() {
+    return this.userService.getDashboardStats();
+  }
 }

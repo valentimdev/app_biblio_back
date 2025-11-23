@@ -25,7 +25,6 @@ export class EventService {
   ) {
     let imageUrl = dto.imageUrl;
 
-    // Upload image if provided
     if (image) {
       imageUrl = await this.storageService.uploadFile(image, 'events');
     }
@@ -34,8 +33,17 @@ export class EventService {
       data: {
         title: dto.title,
         description: dto.description,
-        startTime: dto.startTime,
-        endTime: dto.endTime,
+
+        registrationStartTime: dto.registrationStartTime ? new Date(dto.registrationStartTime) : null,
+        registrationEndTime: dto.registrationEndTime ? new Date(dto.registrationEndTime) : null,
+
+        eventStartTime: new Date(dto.eventStartTime),
+        eventEndTime: new Date(dto.eventEndTime),
+
+
+        startTime: new Date(dto.startTime || dto.eventStartTime),
+        endTime: new Date(dto.endTime || dto.eventEndTime),
+
         location: dto.location,
         imageUrl,
         lecturers: dto.lecturers,
@@ -55,7 +63,7 @@ export class EventService {
           },
         },
       },
-      orderBy: { startTime: 'asc' },
+      orderBy: { eventStartTime: 'asc' },
     });
 
     return events.map((event) => ({
@@ -87,60 +95,81 @@ export class EventService {
     return eventWithUsers;
   }
 
-  async update(
-    id: string,
-    adminId: string,
-    dto: UpdateEventDto,
-    image?: Express.Multer.File,
-  ) {
-    const event = await this.findOne(id);
-    if (event.adminId !== adminId) {
-      throw new ForbiddenException(
-        'Apenas o admin criador pode editar este evento',
-      );
-    }
-
-    const updateData: any = { ...dto };
-
-    // Upload new image if provided
-    if (image) {
-      // Delete old image if exists
-      if (event.imageUrl) {
-        await this.storageService.deleteFileByUrl(event.imageUrl);
-      }
-      updateData.imageUrl = await this.storageService.uploadFile(
-        image,
-        'events',
-      );
-    } else if (dto.imageUrl !== undefined) {
-      // If imageUrl is explicitly set in DTO (including null to remove), use it
-      updateData.imageUrl = dto.imageUrl;
-    }
-
-    const updatedEvent = await (this.prisma as any).event.update({
-      where: { id },
-      data: updateData,
-    });
-
-    if (
-      dto.isDisabled !== undefined &&
-      dto.isDisabled !== event.isDisabled
-    ) {
-      const registrations = await this.prisma.eventRegistration.findMany({
-        where: { eventId: id },
-        select: { userId: true },
-      });
-      if (registrations.length) {
-        await this.notificationService.notifyEventStatusChange(
-          registrations.map((reg) => reg.userId),
-          { id, title: updatedEvent.title },
-          updatedEvent.isDisabled ? 'desabilitado' : 'reabilitado',
-        );
-      }
-    }
-
-    return updatedEvent;
+async update(
+  id: string,
+  adminId: string,
+  dto: UpdateEventDto,
+  image?: Express.Multer.File,
+) {
+  const event = await this.findOne(id);
+  if (event.adminId !== adminId) {
+    throw new ForbiddenException(
+      'Apenas o admin criador pode editar este evento',
+    );
   }
+
+  const updateData: any = { ...dto };
+
+
+  if (dto.registrationStartTime) {
+    updateData.registrationStartTime = new Date(dto.registrationStartTime);
+  }
+  if (dto.registrationEndTime) {
+    updateData.registrationEndTime = new Date(dto.registrationEndTime);
+  }
+  if (dto.eventStartTime) {
+    updateData.eventStartTime = new Date(dto.eventStartTime);
+  }
+  if (dto.eventEndTime) {
+    updateData.eventEndTime = new Date(dto.eventEndTime);
+  }
+
+
+  if (dto.startTime) {
+    updateData.startTime = new Date(dto.startTime);
+  }
+  if (dto.endTime) {
+    updateData.endTime = new Date(dto.endTime);
+  }
+
+
+  if (image) {
+
+    if (event.imageUrl) {
+      await this.storageService.deleteFileByUrl(event.imageUrl);
+    }
+    updateData.imageUrl = await this.storageService.uploadFile(
+      image,
+      'events',
+    );
+  } else if (dto.imageUrl !== undefined) {
+    updateData.imageUrl = dto.imageUrl;
+  }
+
+  const updatedEvent = await (this.prisma as any).event.update({
+    where: { id },
+    data: updateData,
+  });
+
+  if (
+    dto.isDisabled !== undefined &&
+    dto.isDisabled !== event.isDisabled
+  ) {
+    const registrations = await this.prisma.eventRegistration.findMany({
+      where: { eventId: id },
+      select: { userId: true },
+    });
+    if (registrations.length) {
+      await this.notificationService.notifyEventStatusChange(
+        registrations.map((reg) => reg.userId),
+        { id, title: updatedEvent.title },
+        updatedEvent.isDisabled ? 'desabilitado' : 'reabilitado',
+      );
+    }
+  }
+
+  return updatedEvent;
+}
 
   async remove(id: string, adminId: string) {
     const event = await this.findOne(id);
@@ -179,6 +208,22 @@ export class EventService {
       throw new BadRequestException('Evento desabilitado');
     }
 
+    const now = new Date();
+
+    // Verificar período de inscrição
+    if (event.registrationStartTime && now < new Date(event.registrationStartTime)) {
+      throw new BadRequestException('Período de inscrição ainda não iniciou');
+    }
+
+    if (event.registrationEndTime && now > new Date(event.registrationEndTime)) {
+      throw new BadRequestException('Período de inscrição encerrado');
+    }
+
+    // Verificar se evento já aconteceu
+    if (now > new Date(event.eventStartTime)) {
+      throw new BadRequestException('Evento já aconteceu');
+    }
+
     if (
       event.isFull ||
       (event.seats && event.registeredUsers.length >= event.seats)
@@ -193,7 +238,7 @@ export class EventService {
     await this.notificationService.notifyEventRegistration(userId, {
       id: eventId,
       title: event.title,
-      startTime: event.startTime,
+      startTime: new Date(event.eventStartTime), // Data real do evento
     });
 
     if (event.seats && event.registeredUsers.length + 1 >= event.seats) {

@@ -83,14 +83,18 @@ export class UserService {
         return users;
     }
 
-    async updateStatus(userId: string, status: UserStatus) {
+    async toggleStatus(userId: string) {
         const user = await this.prisma.user.findUnique({ where: { id: userId } });
         if (!user) {
             throw new NotFoundException('Usuário não encontrado');
         }
+
+        // Alterna entre ACTIVE e BANNED
+        const newStatus = user.status === UserStatus.ACTIVE ? UserStatus.BANNED : UserStatus.ACTIVE;
+
         const updated = await this.prisma.user.update({
             where: { id: userId },
-            data: { status },
+            data: { status: newStatus },
             select: {
                 id: true,
                 email: true,
@@ -102,6 +106,90 @@ export class UserService {
                 updatedAt: true,
             },
         });
-        return updated;
+
+        return {
+            ...updated,
+            action: newStatus === UserStatus.BANNED ? 'blocked' : 'unblocked',
+        };
+    }
+
+        async getDashboardStats() {
+
+        const totalUsers = await this.prisma.user.count({
+            where: {
+                role: 'USER'
+            }
+        });
+
+        const totalBooks = await this.prisma.book.count();
+
+
+        const totalRentedBooks = await this.prisma.rental.count({
+            where: {
+                returnDate: null
+            }
+        });
+
+        const topRentedBooks = await this.prisma.rental.groupBy({
+            by: ['bookId'],
+            _count: {
+                bookId: true
+            },
+            orderBy: {
+                _count: {
+                    bookId: 'desc'
+                }
+            },
+            take: 5
+        });
+
+        const topBooksWithInfo = await Promise.all(
+            topRentedBooks.map(async (rental) => {
+                const book = await this.prisma.book.findUnique({
+                    where: { id: rental.bookId },
+                    select: {
+                        id: true,
+                        title: true,
+                        author: true,
+                        imageUrl: true,
+                        isbn: true
+                    }
+                });
+                return {
+                    ...book,
+                    totalRentals: rental._count.bookId
+                };
+            })
+        );
+
+        return {
+            totalUsers,
+            totalBooks,
+            totalRentedBooks,
+            availableBooks: totalBooks - totalRentedBooks,
+            topRentedBooks: topBooksWithInfo
+        };
+    }
+
+    async getUserStats() {
+        const totalUsers = await this.prisma.user.count();
+
+        const activeUsers = await this.prisma.user.count({
+            where: {
+                status: 'ACTIVE'
+            }
+        });
+
+        const bannedUsers = await this.prisma.user.count({
+            where: {
+                status: 'BANNED'
+            }
+        });
+
+        return {
+            totalUsers,
+            activeUsers,
+            bannedUsers
+        };
     }
 }

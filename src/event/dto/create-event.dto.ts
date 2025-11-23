@@ -11,10 +11,27 @@ export class CreateEventDto {
   description?: string;
 
   @IsDateString()
-  startTime: string;
+  @IsOptional()
+  registrationStartTime?: string;
 
   @IsDateString()
-  endTime: string;
+  @IsOptional()
+  registrationEndTime?: string;
+
+  @IsDateString()
+  eventStartTime: string;
+
+  @IsDateString()
+  eventEndTime: string;
+
+
+  @IsDateString()
+  @IsOptional()
+  startTime?: string;
+
+  @IsDateString()
+  @IsOptional()
+  endTime?: string;
 
   @IsString()
   @IsNotEmpty()
@@ -32,7 +49,7 @@ export class CreateEventDto {
   @IsBoolean()
   @IsOptional()
   isDisabled?: boolean;
-  
+
   @IsOptional()
   seats?: number;
 }

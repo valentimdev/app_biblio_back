@@ -171,5 +171,25 @@ export class UserService {
         };
     }
 
+    async getUserStats() {
+        const totalUsers = await this.prisma.user.count();
 
+        const activeUsers = await this.prisma.user.count({
+            where: {
+                status: 'ACTIVE'
+            }
+        });
+
+        const bannedUsers = await this.prisma.user.count({
+            where: {
+                status: 'BANNED'
+            }
+        });
+
+        return {
+            totalUsers,
+            activeUsers,
+            bannedUsers
+        };
+    }
 }

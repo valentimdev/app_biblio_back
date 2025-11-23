@@ -61,4 +61,11 @@ export class UserController {
   getDashboardStats() {
     return this.userService.getDashboardStats();
   }
+
+    @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  @Get('users-stats')
+  getUserStats() {
+    return this.userService.getUserStats();
+  }
 }

@@ -59,6 +59,29 @@ export class RentalService {
     });
   }
 
+async findById(id: string) {
+    const rental = await this.prisma.rental.findUnique({
+      where: { id },
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        book: { select: { id: true, title: true, author: true } },
+      },
+    });
+    if (!rental) {
+      throw new NotFoundException(`Aluguel com ID "${id}" não encontrado.`);
+    }
+    return rental;
+  }
+
+  async findByBook(bookId: string) {
+    return this.prisma.rental.findMany({
+      where: { bookId },
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+      },
+    });
+  }
+
   async findByUser(userId: string) {
     return this.prisma.rental.findMany({
       where: { userId },

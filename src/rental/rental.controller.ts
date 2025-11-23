@@ -21,6 +21,16 @@ export class RentalController {
     return this.rentalService.findAll();
   }
 
+  @Get(':id')
+  findById(@Param('id') id: string) {
+    return this.rentalService.findById(id);
+  }
+
+  @Get('book/:bookId')
+  findByBook(@Param('bookId') bookId: string) {
+    return this.rentalService.findByBook(bookId);
+  }
+
   @Get('user/:userId')
   findByUser(@Param('userId') userId: string) {
     return this.rentalService.findByUser(userId);

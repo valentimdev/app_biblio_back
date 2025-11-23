@@ -83,14 +83,18 @@ export class UserService {
         return users;
     }
 
-    async updateStatus(userId: string, status: UserStatus) {
+    async toggleStatus(userId: string) {
         const user = await this.prisma.user.findUnique({ where: { id: userId } });
         if (!user) {
             throw new NotFoundException('Usuário não encontrado');
         }
+
+        // Alterna entre ACTIVE e BANNED
+        const newStatus = user.status === UserStatus.ACTIVE ? UserStatus.BANNED : UserStatus.ACTIVE;
+
         const updated = await this.prisma.user.update({
             where: { id: userId },
-            data: { status },
+            data: { status: newStatus },
             select: {
                 id: true,
                 email: true,
@@ -102,6 +106,11 @@ export class UserService {
                 updatedAt: true,
             },
         });
-        return updated;
+
+        return {
+            ...updated,
+            action: newStatus === UserStatus.BANNED ? 'blocked' : 'unblocked',
+        };
     }
+
 }

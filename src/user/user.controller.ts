@@ -50,11 +50,8 @@ export class UserController {
 
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
-  @Patch(':id/status')
-  updateStatus(
-    @Param('id') id: string,
-    @Body() dto: UpdateUserStatusDto,
-  ) {
-    return this.userService.updateStatus(id, dto.status);
+  @Patch(':id/toggle-status')
+  toggleStatus(@Param('id') id: string) {
+    return this.userService.toggleStatus(id);
   }
 }

@@ -1,6 +1,6 @@
 # --- Estágio 1: Builder ---
 # Usamos uma imagem Node "alpine" (leve) para construir o projeto
-FROM node:18-alpine AS builder
+FROM node:18 AS builder
 
 WORKDIR /app
 
@@ -21,7 +21,7 @@ RUN npm run build
 
 # --- Estágio 2: Production ---
 # Começamos de uma imagem Node limpa e leve
-FROM node:18-alpine
+FROM node:18
 
 WORKDIR /app
 

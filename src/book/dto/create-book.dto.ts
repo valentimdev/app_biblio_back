@@ -1,4 +1,11 @@
-import { IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import {
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export class CreateBookDto {
   @IsString()
@@ -27,4 +34,9 @@ export class CreateBookDto {
   @IsInt()
   @Min(0)
   totalCopies: number;
+
+  @IsInt()
+  @IsOptional()
+  @Min(0)
+  availableCopies?: number;
 }

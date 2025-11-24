@@ -1,0 +1,166 @@
+{
+	"info": {
+		"_postman_id": "event-create-example",
+		"name": "Create Event - App Biblio",
+		"description": "Exemplo de requisição para criar evento com upload de imagem",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Create Event (com imagem)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "title",
+							"value": "Evento de Teste",
+							"type": "text"
+						},
+						{
+							"key": "description",
+							"value": "Descrição do evento de teste",
+							"type": "text"
+						},
+						{
+							"key": "location",
+							"value": "Unifor - Bloco A",
+							"type": "text"
+						},
+						{
+							"key": "eventStartTime",
+							"value": "2025-12-12T10:10:00Z",
+							"type": "text"
+						},
+						{
+							"key": "eventEndTime",
+							"value": "2025-12-13T11:11:00Z",
+							"type": "text"
+						},
+						{
+							"key": "startTime",
+							"value": "2025-12-12T10:10:00Z",
+							"type": "text"
+						},
+						{
+							"key": "endTime",
+							"value": "2025-12-13T11:11:00Z",
+							"type": "text"
+						},
+						{
+							"key": "registrationStartTime",
+							"value": "2025-12-01T00:00:00Z",
+							"type": "text"
+						},
+						{
+							"key": "registrationEndTime",
+							"value": "2025-12-11T23:59:59Z",
+							"type": "text"
+						},
+						{
+							"key": "seats",
+							"value": "50",
+							"type": "text"
+						},
+						{
+							"key": "isDisabled",
+							"value": "false",
+							"type": "text"
+						},
+						{
+							"key": "lecturers",
+							"value": "Dr. João Silva, Dra. Maria Santos",
+							"type": "text"
+						},
+						{
+							"key": "image",
+							"type": "file",
+							"src": []
+						}
+					]
+				},
+				"url": {
+					"raw": "{{base_url}}/events",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"events"
+					]
+				},
+				"description": "Cria um novo evento com upload de imagem"
+			},
+			"response": []
+		},
+		{
+			"name": "Create Event (mínimo - sem imagem)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "title",
+							"value": "Evento Mínimo",
+							"type": "text"
+						},
+						{
+							"key": "location",
+							"value": "Unifor",
+							"type": "text"
+						},
+						{
+							"key": "eventStartTime",
+							"value": "2025-12-12T10:00:00Z",
+							"type": "text"
+						},
+						{
+							"key": "eventEndTime",
+							"value": "2025-12-12T12:00:00Z",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "{{base_url}}/events",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"events"
+					]
+				},
+				"description": "Cria um evento apenas com os campos obrigatórios"
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "https://appbiblioback-production.up.railway.app",
+			"type": "string"
+		},
+		{
+			"key": "jwt_token",
+			"value": "SEU_TOKEN_JWT_AQUI",
+			"type": "string"
+		}
+	]
+}
+

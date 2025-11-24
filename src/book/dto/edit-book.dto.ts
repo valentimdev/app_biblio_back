@@ -24,4 +24,8 @@ export class EditBookDto {
   @Min(0)
   totalCopies?: number;
 
+  @IsInt()
+  @IsOptional()
+  @Min(0)
+  availableCopies?: number;
 }

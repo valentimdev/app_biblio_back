@@ -1,7 +1,20 @@
-import { Controller, Post, Patch, Get, Param, Body } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Patch,
+  Get,
+  Param,
+  Body,
+  ParseUUIDPipe,
+  UseGuards,
+} from '@nestjs/common';
 import { RentalService } from './rental.service';
 import { CreateRentalDto } from './dto/create-rental.dto';
+import { JwtGuard } from '../auth/guard/jwt.guard';
+import { RolesGuard } from '../auth/guard/roles.guard';
+import { Roles } from '../auth/decorator/roles.decorator';
 
+@UseGuards(JwtGuard)
 @Controller('rentals')
 export class RentalController {
   constructor(private readonly rentalService: RentalService) {}
@@ -12,27 +25,29 @@ export class RentalController {
   }
 
   @Patch(':id/return')
-  returnBook(@Param('id') id: string) {
+  returnBook(@Param('id', ParseUUIDPipe) id: string) {
     return this.rentalService.returnBook(id);
   }
 
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
   @Get()
   findAll() {
     return this.rentalService.findAll();
   }
 
-  @Get(':id')
-  findById(@Param('id') id: string) {
-    return this.rentalService.findById(id);
-  }
-
   @Get('book/:bookId')
-  findByBook(@Param('bookId') bookId: string) {
+  findByBook(@Param('bookId', ParseUUIDPipe) bookId: string) {
     return this.rentalService.findByBook(bookId);
   }
 
   @Get('user/:userId')
-  findByUser(@Param('userId') userId: string) {
+  findByUser(@Param('userId', ParseUUIDPipe) userId: string) {
     return this.rentalService.findByUser(userId);
+  }
+
+  @Get(':id')
+  findById(@Param('id', ParseUUIDPipe) id: string) {
+    return this.rentalService.findById(id);
   }
 }

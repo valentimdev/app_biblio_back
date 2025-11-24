@@ -9,8 +9,21 @@ import { BookModule } from './book/book.module';
 import { ChatModule } from './chat/chat.module';
 import { StorageModule } from './storage/storage.module';
 import { NotificationModule } from './notification/notification.module';
-  
+import { RentalModule } from './rental/rental.module';
+
 @Module({
-  imports: [AuthModule, UserModule, EventModule, HomeModule, PrismaModule, ConfigModule.forRoot({isGlobal:true}), BookModule, ChatModule, StorageModule, NotificationModule],
+  imports: [
+    AuthModule,
+    UserModule,
+    EventModule,
+    HomeModule,
+    PrismaModule,
+    ConfigModule.forRoot({ isGlobal: true }),
+    BookModule,
+    ChatModule,
+    StorageModule,
+    NotificationModule,
+    RentalModule,
+  ],
 })
 export class AppModule {}

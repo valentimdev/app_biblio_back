@@ -13,4 +13,4 @@ npx prisma db seed
 
 # 3. Inicia a aplicação (o seu "start:prod")
 echo "Railway: Starting NestJS application..."
-node dist/src/main.js
+node start.js

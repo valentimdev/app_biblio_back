@@ -41,8 +41,9 @@ COPY --from=builder /app/prisma ./prisma
 # (Opcional) Gera o cliente Prisma novamente, por garantia
 RUN npx prisma generate
 
-# Copia o entrypoint.sh (da próxima etapa)
+# Copia o entrypoint.sh e start.js (da próxima etapa)
 COPY entrypoint.sh .
+COPY start.js .
 RUN chmod +x entrypoint.sh
 
 # Expõe a porta que sua aplicação NestJS usa (padrão 3000)

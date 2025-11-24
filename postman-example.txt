@@ -1,0 +1,85 @@
+===========================================
+EXEMPLO PARA POSTMAN - POST /events
+===========================================
+
+URL: POST https://appbiblioback-production.up.railway.app/events
+
+HEADERS:
+Authorization: Bearer SEU_TOKEN_JWT_AQUI
+
+BODY (form-data):
+--------------------------------------------------
+Key: title
+Type: Text
+Value: Evento de Teste
+
+Key: description
+Type: Text
+Value: Descrição do evento
+
+Key: location
+Type: Text
+Value: Unifor
+
+Key: eventStartTime
+Type: Text
+Value: 2025-12-12T10:10:00Z
+
+Key: eventEndTime
+Type: Text
+Value: 2025-12-13T11:11:00Z
+
+Key: seats
+Type: Text
+Value: 10
+
+Key: isDisabled
+Type: Text
+Value: false
+
+Key: image
+Type: File
+Value: [Selecione um arquivo de imagem .jpg, .png, .gif ou .webp]
+--------------------------------------------------
+
+CAMPOS OPCIONAIS (adicione se necessário):
+- startTime: 2025-12-12T10:10:00Z
+- endTime: 2025-12-13T11:11:00Z
+- registrationStartTime: 2025-12-01T00:00:00Z
+- registrationEndTime: 2025-12-11T23:59:59Z
+- lecturers: Nome dos palestrantes
+- imageUrl: URL externa (se não usar upload)
+
+===========================================
+PASSO A PASSO NO POSTMAN:
+===========================================
+
+1. Método: POST
+2. URL: https://appbiblioback-production.up.railway.app/events
+3. Aba "Authorization":
+   - Type: Bearer Token
+   - Token: [cole seu JWT aqui]
+4. Aba "Body":
+   - Selecione "form-data"
+   - Adicione os campos acima
+   - Para "image", mude o tipo para "File" e selecione uma imagem
+5. Clique em "Send"
+
+===========================================
+EXEMPLO MÍNIMO (apenas obrigatórios):
+===========================================
+
+Key: title
+Value: Evento Teste
+
+Key: location
+Value: Unifor
+
+Key: eventStartTime
+Value: 2025-12-12T10:00:00Z
+
+Key: eventEndTime
+Value: 2025-12-12T12:00:00Z
+
+===========================================
+

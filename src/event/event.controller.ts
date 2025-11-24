@@ -31,7 +31,15 @@ export class EventController {
     @Body() dto: CreateEventDto,
     @UploadedFile() image?: Express.Multer.File,
   ) {
-    return this.eventService.create(adminId, dto, image);
+    try {
+      if (image && (!image.buffer || image.size === 0)) {
+        return this.eventService.create(adminId, dto, undefined);
+      }
+      return await this.eventService.create(adminId, dto, image);
+    } catch (error) {
+      console.error('Error in event controller create:', error);
+      throw error;
+    }
   }
 
   @UseGuards(JwtGuard, RolesGuard)

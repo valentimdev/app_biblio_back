@@ -56,9 +56,10 @@ export class CreateEventDto {
   lecturers?: string;
 
   @Transform(({ value }) => {
+    if (value === undefined || value === null || value === '') return undefined;
     if (value === 'true' || value === true) return true;
     if (value === 'false' || value === false) return false;
-    return value;
+    return Boolean(value);
   })
   @IsBoolean()
   @IsOptional()
@@ -66,8 +67,9 @@ export class CreateEventDto {
 
   @Transform(({ value }) => {
     if (value === '' || value === null || value === undefined) return undefined;
-    const num = parseInt(value, 10);
-    return isNaN(num) ? value : num;
+    if (typeof value === 'number') return value;
+    const num = parseInt(String(value), 10);
+    return isNaN(num) ? undefined : num;
   })
   @IsInt()
   @Min(0)

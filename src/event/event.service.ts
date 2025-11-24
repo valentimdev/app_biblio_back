@@ -23,35 +23,87 @@ export class EventService {
     dto: CreateEventDto,
     image?: Express.Multer.File,
   ) {
-    let imageUrl = dto.imageUrl;
+    try {
+      let imageUrl = dto.imageUrl;
 
-    if (image) {
-      imageUrl = await this.storageService.uploadFile(image, 'events');
+      if (image) {
+        try {
+          imageUrl = await this.storageService.uploadFile(image, 'events');
+        } catch (error) {
+          console.error('Error uploading image:', error);
+          throw new BadRequestException(
+            error instanceof BadRequestException
+              ? error.message
+              : 'Erro ao fazer upload da imagem',
+          );
+        }
+      }
+
+      try {
+        return await (this.prisma as any).event.create({
+          data: {
+            title: dto.title,
+            description: dto.description,
+
+            registrationStartTime: dto.registrationStartTime
+              ? new Date(dto.registrationStartTime)
+              : null,
+            registrationEndTime: dto.registrationEndTime
+              ? new Date(dto.registrationEndTime)
+              : null,
+
+            eventStartTime: new Date(dto.eventStartTime),
+            eventEndTime: new Date(dto.eventEndTime),
+
+            startTime: new Date(dto.startTime || dto.eventStartTime),
+            endTime: new Date(dto.endTime || dto.eventEndTime),
+
+            location: dto.location,
+            imageUrl,
+            lecturers: dto.lecturers,
+            seats: dto.seats,
+            isDisabled: dto.isDisabled || false,
+            adminId,
+          },
+        });
+      } catch (error) {
+        console.error('Error creating event in database:', error);
+        if (imageUrl && imageUrl !== dto.imageUrl) {
+          try {
+            await this.storageService.deleteFileByUrl(imageUrl);
+          } catch (deleteError) {
+            console.error('Error deleting uploaded image after DB error:', deleteError);
+          }
+        }
+
+        if (error && typeof error === 'object' && 'code' in error) {
+          const prismaError = error as any;
+          if (prismaError.code === 'P2002') {
+            throw new BadRequestException('Já existe um evento com esses dados');
+          }
+          if (prismaError.code === 'P2003') {
+            throw new BadRequestException('Referência inválida. Verifique os dados fornecidos.');
+          }
+        }
+
+        if (error && typeof error === 'object' && 'message' in error) {
+          const errorMessage = (error as any).message;
+          if (errorMessage && typeof errorMessage === 'string') {
+            throw new BadRequestException(`Erro ao criar evento: ${errorMessage}`);
+          }
+        }
+
+        throw new BadRequestException(
+          'Erro ao criar evento. Verifique os dados fornecidos.',
+        );
+      }
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      console.error('Unexpected error in create event:', error);
+      throw new BadRequestException('Erro inesperado ao criar evento');
     }
-
-    return (this.prisma as any).event.create({
-      data: {
-        title: dto.title,
-        description: dto.description,
-
-        registrationStartTime: dto.registrationStartTime ? new Date(dto.registrationStartTime) : null,
-        registrationEndTime: dto.registrationEndTime ? new Date(dto.registrationEndTime) : null,
-
-        eventStartTime: new Date(dto.eventStartTime),
-        eventEndTime: new Date(dto.eventEndTime),
-
-
-        startTime: new Date(dto.startTime || dto.eventStartTime),
-        endTime: new Date(dto.endTime || dto.eventEndTime),
-
-        location: dto.location,
-        imageUrl,
-        lecturers: dto.lecturers,
-        seats: dto.seats,
-        isDisabled: dto.isDisabled || false,
-        adminId,
-      },
-    });
   }
 
   async findAll() {

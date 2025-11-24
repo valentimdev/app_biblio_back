@@ -1,4 +1,5 @@
-import { IsBoolean, IsDateString, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsBoolean, IsDateString, IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class CreateEventDto {
   @IsString()
@@ -24,7 +25,6 @@ export class CreateEventDto {
   @IsDateString()
   eventEndTime: string;
 
-
   @IsDateString()
   @IsOptional()
   startTime?: string;
@@ -46,10 +46,22 @@ export class CreateEventDto {
   @IsOptional()
   lecturers?: string;
 
+  @Transform(({ value }) => {
+    if (value === 'true' || value === true) return true;
+    if (value === 'false' || value === false) return false;
+    return value;
+  })
   @IsBoolean()
   @IsOptional()
   isDisabled?: boolean;
 
+  @Transform(({ value }) => {
+    if (value === '' || value === null || value === undefined) return undefined;
+    const num = parseInt(value, 10);
+    return isNaN(num) ? value : num;
+  })
+  @IsInt()
+  @Min(0)
   @IsOptional()
   seats?: number;
 }

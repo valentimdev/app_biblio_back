@@ -3,6 +3,7 @@
 # Para o script se qualquer comando falhar
 set -e
 
+export NODE_OPTIONS="--require ./crypto-polyfill.js"
 # 1. Roda as migrações
 echo "Railway: Running Prisma migrations..."
 npx prisma migrate deploy

@@ -113,38 +113,41 @@ export class UserService {
         };
     }
 
-        async getDashboardStats() {
-
+    async getDashboardStats() {
+        // Pegamos todos os livros, só com o necessário
+        const books = await this.prisma.book.findMany({
+            select: {
+                totalCopies: true,
+                availableCopies: true
+            }
+        });
+    
+        // Soma total de exemplares cadastrados
+        const totalBooks = books.reduce((acc, b) => acc + b.totalCopies, 0);
+    
+        // Soma total de exemplares disponíveis
+        const availableBooks = books.reduce((acc, b) => acc + b.availableCopies, 0);
+    
+        // Livros alugados = total - disponíveis
+        const totalRentedBooks = totalBooks - availableBooks;
+    
+        // Conta usuários normais
         const totalUsers = await this.prisma.user.count({
-            where: {
-                role: 'USER'
-            }
+            where: { role: 'USER' }
         });
-
-        const totalBooks = await this.prisma.book.count();
-
-
-        const totalRentedBooks = await this.prisma.rental.count({
-            where: {
-                returnDate: null
-            }
-        });
-
+    
+        // Top livros mais alugados
         const topRentedBooks = await this.prisma.rental.groupBy({
             by: ['bookId'],
-            _count: {
-                bookId: true
-            },
+            _count: { bookId: true },
             orderBy: {
-                _count: {
-                    bookId: 'desc'
-                }
+                _count: { bookId: 'desc' }
             },
             take: 5
         });
-
+    
         const topBooksWithInfo = await Promise.all(
-            topRentedBooks.map(async (rental) => {
+            topRentedBooks.map(async rental => {
                 const book = await this.prisma.book.findUnique({
                     where: { id: rental.bookId },
                     select: {
@@ -161,12 +164,12 @@ export class UserService {
                 };
             })
         );
-
+    
         return {
             totalUsers,
             totalBooks,
             totalRentedBooks,
-            availableBooks: totalBooks - totalRentedBooks,
+            availableBooks,
             topRentedBooks: topBooksWithInfo
         };
     }

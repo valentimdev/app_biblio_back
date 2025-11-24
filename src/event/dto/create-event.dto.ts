@@ -1,4 +1,13 @@
-import { IsBoolean, IsDateString, IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsDateString,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class CreateEventDto {
@@ -65,5 +74,3 @@ export class CreateEventDto {
   @IsOptional()
   seats?: number;
 }
-
-

@@ -29,6 +29,15 @@ export class RentalController {
     return this.rentalService.returnBook(id);
   }
 
+  @Patch(':id/renew')
+  renewRental(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body?: { additionalDays?: number },
+  ) {
+    const additionalDays = body?.additionalDays || 7;
+    return this.rentalService.renewRental(id, additionalDays);
+  }
+
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
   @Get()

@@ -76,6 +76,35 @@ export class RentalService {
     return updatedRental;
   }
 
+  async renewRental(rentalId: string, additionalDays: number = 7) {
+    const rental = await this.prisma.rental.findUnique({
+      where: { id: rentalId },
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        book: { select: { id: true, title: true, author: true } },
+      },
+    });
+
+    if (!rental) throw new NotFoundException('Aluguel não encontrado');
+    if (rental.returnDate)
+      throw new BadRequestException('Não é possível renovar um livro já devolvido');
+
+    const newDueDate = new Date(
+      rental.dueDate.getTime() + additionalDays * 24 * 60 * 60 * 1000,
+    );
+
+    const updatedRental = await this.prisma.rental.update({
+      where: { id: rentalId },
+      data: { dueDate: newDueDate },
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        book: { select: { id: true, title: true, author: true } },
+      },
+    });
+
+    return updatedRental;
+  }
+
   async findAll() {
     return this.prisma.rental.findMany({
       include: {

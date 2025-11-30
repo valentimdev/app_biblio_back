@@ -62,42 +62,94 @@ export class BookService {
     dto: CreateBookDto,
     image?: Express.Multer.File,
   ) {
-    let imageUrl = dto.imageUrl;
+    try {
+      let imageUrl = dto.imageUrl;
 
-    // Upload image if provided
-    if (image) {
-      imageUrl = await this.storageService.uploadFile(image, 'books');
+      // Upload image if provided
+      if (image) {
+        try {
+          imageUrl = await this.storageService.uploadFile(image, 'books');
+        } catch (error) {
+          console.error('Error uploading image:', error);
+          throw new BadRequestException(
+            error instanceof BadRequestException
+              ? error.message
+              : 'Erro ao fazer upload da imagem',
+          );
+        }
+      }
+
+      // Se availableCopies foi fornecido no DTO, usa ele; caso contrário, inicia igual a totalCopies
+      const availableCopies =
+        dto.availableCopies !== undefined ? dto.availableCopies : dto.totalCopies;
+
+      try {
+        return await this.prisma.book.create({
+          data: {
+            adminId,
+            title: dto.title,
+            author: dto.author,
+            isbn: dto.isbn,
+            description: dto.description,
+            totalCopies: dto.totalCopies,
+            availableCopies, // Usa o valor do DTO ou totalCopies como padrão
+            imageUrl,
+          },
+          select: {
+            id: true,
+            title: true,
+            author: true,
+            isbn: true,
+            description: true,
+            imageUrl: true,
+            totalCopies: true,
+            availableCopies: true,
+            createdAt: true,
+            updatedAt: true,
+            adminId: true,
+          },
+        });
+      } catch (error) {
+        console.error('Error creating book in database:', error);
+        // Se houve erro no banco mas a imagem foi enviada, tentar deletar
+        if (imageUrl && imageUrl !== dto.imageUrl) {
+          try {
+            await this.storageService.deleteFileByUrl(imageUrl);
+          } catch (deleteError) {
+            console.error('Error deleting uploaded image after DB error:', deleteError);
+          }
+        }
+
+        // Verificar se é um erro do Prisma
+        if (error && typeof error === 'object' && 'code' in error) {
+          const prismaError = error as any;
+          if (prismaError.code === 'P2002') {
+            throw new BadRequestException('Já existe um livro com esse ISBN');
+          }
+          if (prismaError.code === 'P2003') {
+            throw new BadRequestException('Referência inválida. Verifique os dados fornecidos.');
+          }
+        }
+
+        // Se o erro tem uma mensagem, usar ela
+        if (error && typeof error === 'object' && 'message' in error) {
+          const errorMessage = (error as any).message;
+          if (errorMessage && typeof errorMessage === 'string') {
+            throw new BadRequestException(`Erro ao criar livro: ${errorMessage}`);
+          }
+        }
+
+        throw new BadRequestException(
+          'Erro ao criar livro. Verifique os dados fornecidos.',
+        );
+      }
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      console.error('Unexpected error in create book:', error);
+      throw new BadRequestException('Erro inesperado ao criar livro');
     }
-
-    // Se availableCopies foi fornecido no DTO, usa ele; caso contrário, inicia igual a totalCopies
-    const availableCopies =
-      dto.availableCopies !== undefined ? dto.availableCopies : dto.totalCopies;
-
-    return this.prisma.book.create({
-      data: {
-        adminId,
-        title: dto.title,
-        author: dto.author,
-        isbn: dto.isbn,
-        description: dto.description,
-        totalCopies: dto.totalCopies,
-        availableCopies, // Usa o valor do DTO ou totalCopies como padrão
-        imageUrl,
-      },
-      select: {
-        id: true,
-        title: true,
-        author: true,
-        isbn: true,
-        description: true,
-        imageUrl: true,
-        totalCopies: true,
-        availableCopies: true,
-        createdAt: true,
-        updatedAt: true,
-        adminId: true,
-      },
-    });
   }
 
   async update(
@@ -134,8 +186,8 @@ export class BookService {
       dto.totalCopies !== undefined &&
       dto.totalCopies !== book.totalCopies
     ) {
-    
-      
+
+
       const difference = dto.totalCopies - book.totalCopies;
 
       const newAvailableCopies = Math.max(0, book.availableCopies + difference);
@@ -163,12 +215,30 @@ export class BookService {
 
   async remove(id: string, adminId: string) {
     const book = await this.findOne(id);
-    if (book.adminId !== adminId)
+    if (book.adminId !== adminId) {
       throw new ForbiddenException('Only creator can delete');
+    }
+
+    // Verificar se há rentals associados
+    const rentals = await this.prisma.rental.findMany({
+      where: { bookId: id },
+      select: { id: true },
+    });
+
+    if (rentals.length > 0) {
+      throw new BadRequestException(
+        `Não é possível excluir o livro pois existem ${rentals.length} aluguel(is) associado(s). Primeiro, finalize ou cancele os aluguéis.`,
+      );
+    }
 
     // Delete image from storage if exists
     if (book.imageUrl) {
-      await this.storageService.deleteFileByUrl(book.imageUrl);
+      try {
+        await this.storageService.deleteFileByUrl(book.imageUrl);
+      } catch (error) {
+        // Log o erro mas não impede a exclusão do livro
+        console.error('Error deleting book image from storage:', error);
+      }
     }
 
     await this.prisma.book.delete({ where: { id } });

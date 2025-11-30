@@ -19,7 +19,7 @@ export class StorageService {
     this.blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
     this.containerName = containerName;
     this.containerClient = this.blobServiceClient.getContainerClient(containerName);
-    
+
     // Ensure container exists (fire and forget)
     this.ensureContainerExists().catch((error) => {
       console.error('Failed to ensure container exists:', error);
@@ -68,7 +68,7 @@ export class StorageService {
 
     try {
       const blockBlobClient = this.containerClient.getBlockBlobClient(blobName);
-      
+
       await blockBlobClient.upload(file.buffer, file.size, {
         blobHTTPHeaders: {
           blobContentType: file.mimetype,
@@ -85,25 +85,64 @@ export class StorageService {
 
   async deleteFile(blobUrl: string): Promise<void> {
     try {
+      // Validar se a URL é válida
+      if (!blobUrl || blobUrl.trim() === '') {
+        console.warn('Empty or invalid blob URL provided');
+        return;
+      }
+
+      // Verificar se a URL parece ser uma URL válida do Azure
+      if (!blobUrl.startsWith('http://') && !blobUrl.startsWith('https://')) {
+        console.warn(`Invalid blob URL format: ${blobUrl}`);
+        return;
+      }
+
       // Extract blob name from URL
       // URL format: https://accountname.blob.core.windows.net/containername/folder/filename.ext
       const url = new URL(blobUrl);
       const pathParts = url.pathname.split('/').filter(part => part.length > 0);
-      
+
+      // Verificar se há partes suficientes na URL
+      if (pathParts.length < 2) {
+        console.warn(`Invalid blob URL structure: ${blobUrl}`);
+        return;
+      }
+
       // Find container name index and get everything after it
       const containerIndex = pathParts.findIndex(part => part === this.containerName);
       if (containerIndex === -1) {
         console.warn(`Container name ${this.containerName} not found in URL: ${blobUrl}`);
         return;
       }
-      
+
       const blobName = pathParts.slice(containerIndex + 1).join('/');
+
+      // Verificar se o blobName não está vazio
+      if (!blobName || blobName.trim() === '') {
+        console.warn(`Empty blob name extracted from URL: ${blobUrl}`);
+        return;
+      }
 
       const blockBlobClient = this.containerClient.getBlockBlobClient(blobName);
       await blockBlobClient.deleteIfExists();
     } catch (error) {
+      // Se for erro de URL inválida, apenas logar
+      if (error instanceof TypeError && error.message.includes('Invalid URL')) {
+        console.warn(`Invalid URL format: ${blobUrl}`);
+        return;
+      }
+
+      // Se for erro do Azure sobre URI inválida, apenas logar
+      if (error && typeof error === 'object' && 'code' in error) {
+        const azureError = error as any;
+        if (azureError.code === 'InvalidUri' || azureError.statusCode === 400) {
+          console.warn(`Invalid Azure blob URI: ${blobUrl}`, azureError.message);
+          return;
+        }
+      }
+
       console.error('Error deleting file from Azure:', error);
-      // Don't throw error if file doesn't exist
+      // Don't throw error - apenas logar para não quebrar o fluxo
     }
   }
 
@@ -124,13 +163,13 @@ export class StorageService {
       const blockBlobClient = this.containerClient.getBlockBlobClient(blobName);
       const downloadResponse = await blockBlobClient.download(0);
       const chunks: Buffer[] = [];
-      
+
       if (downloadResponse.readableStreamBody) {
         for await (const chunk of downloadResponse.readableStreamBody) {
           chunks.push(Buffer.from(chunk));
         }
       }
-      
+
       return Buffer.concat(chunks);
     } catch (error) {
       console.error('Error downloading file from Azure:', error);

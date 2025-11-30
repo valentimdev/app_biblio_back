@@ -215,12 +215,30 @@ export class BookService {
 
   async remove(id: string, adminId: string) {
     const book = await this.findOne(id);
-    if (book.adminId !== adminId)
+    if (book.adminId !== adminId) {
       throw new ForbiddenException('Only creator can delete');
+    }
+
+    // Verificar se há rentals associados
+    const rentals = await this.prisma.rental.findMany({
+      where: { bookId: id },
+      select: { id: true },
+    });
+
+    if (rentals.length > 0) {
+      throw new BadRequestException(
+        `Não é possível excluir o livro pois existem ${rentals.length} aluguel(is) associado(s). Primeiro, finalize ou cancele os aluguéis.`,
+      );
+    }
 
     // Delete image from storage if exists
     if (book.imageUrl) {
-      await this.storageService.deleteFileByUrl(book.imageUrl);
+      try {
+        await this.storageService.deleteFileByUrl(book.imageUrl);
+      } catch (error) {
+        // Log o erro mas não impede a exclusão do livro
+        console.error('Error deleting book image from storage:', error);
+      }
     }
 
     await this.prisma.book.delete({ where: { id } });

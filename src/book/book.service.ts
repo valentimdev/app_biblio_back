@@ -32,6 +32,8 @@ export class BookService {
         createdAt: true,
         updatedAt: true,
         adminId: true,
+        isHidden: true,
+        loanEnabled: true,
       },
     });
   }
@@ -51,6 +53,8 @@ export class BookService {
         createdAt: true,
         updatedAt: true,
         adminId: true,
+        isHidden: true,
+        loanEnabled: true,
       },
     });
     if (!book) throw new NotFoundException('Book not found');
@@ -65,7 +69,6 @@ export class BookService {
     try {
       let imageUrl = dto.imageUrl;
 
-      // Upload image if provided
       if (image) {
         try {
           imageUrl = await this.storageService.uploadFile(image, 'books');
@@ -79,7 +82,6 @@ export class BookService {
         }
       }
 
-      // Se availableCopies foi fornecido no DTO, usa ele; caso contrário, inicia igual a totalCopies
       const availableCopies =
         dto.availableCopies !== undefined ? dto.availableCopies : dto.totalCopies;
 
@@ -92,8 +94,12 @@ export class BookService {
             isbn: dto.isbn,
             description: dto.description,
             totalCopies: dto.totalCopies,
-            availableCopies, // Usa o valor do DTO ou totalCopies como padrão
+            availableCopies,
             imageUrl,
+            // isHidden e loanEnabled usam o default do Prisma,
+            // mas se você quiser permitir no DTO, pode colocar:
+            // isHidden: dto.isHidden ?? false,
+            // loanEnabled: dto.loanEnabled ?? true,
           },
           select: {
             id: true,
@@ -107,11 +113,13 @@ export class BookService {
             createdAt: true,
             updatedAt: true,
             adminId: true,
+            isHidden: true,
+            loanEnabled: true,
           },
         });
       } catch (error) {
         console.error('Error creating book in database:', error);
-        // Se houve erro no banco mas a imagem foi enviada, tentar deletar
+
         if (imageUrl && imageUrl !== dto.imageUrl) {
           try {
             await this.storageService.deleteFileByUrl(imageUrl);
@@ -120,18 +128,18 @@ export class BookService {
           }
         }
 
-        // Verificar se é um erro do Prisma
         if (error && typeof error === 'object' && 'code' in error) {
           const prismaError = error as any;
           if (prismaError.code === 'P2002') {
             throw new BadRequestException('Já existe um livro com esse ISBN');
           }
           if (prismaError.code === 'P2003') {
-            throw new BadRequestException('Referência inválida. Verifique os dados fornecidos.');
+            throw new BadRequestException(
+              'Referência inválida. Verifique os dados fornecidos.',
+            );
           }
         }
 
-        // Se o erro tem uma mensagem, usar ela
         if (error && typeof error === 'object' && 'message' in error) {
           const errorMessage = (error as any).message;
           if (errorMessage && typeof errorMessage === 'string') {
@@ -164,37 +172,27 @@ export class BookService {
 
     const updateData: any = { ...dto };
 
-    // Upload new image if provided
     if (image) {
-      // Delete old image if exists
       if (book.imageUrl) {
         await this.storageService.deleteFileByUrl(book.imageUrl);
       }
-      updateData.imageUrl = await this.storageService.uploadFile(
-        image,
-        'books',
-      );
+      updateData.imageUrl = await this.storageService.uploadFile(image, 'books');
     } else if (dto.imageUrl !== undefined) {
-      // If imageUrl is explicitly set in DTO (including null to remove), use it
       updateData.imageUrl = dto.imageUrl;
     }
 
-    // Se availableCopies foi fornecido no DTO, usa ele
     if (dto.availableCopies !== undefined) {
       updateData.availableCopies = dto.availableCopies;
     } else if (
       dto.totalCopies !== undefined &&
       dto.totalCopies !== book.totalCopies
     ) {
-
-
       const difference = dto.totalCopies - book.totalCopies;
-
       const newAvailableCopies = Math.max(0, book.availableCopies + difference);
       updateData.availableCopies = newAvailableCopies;
     }
 
-    return this.prisma.book.update({
+    const updated = await this.prisma.book.update({
       where: { id },
       data: updateData,
       select: {
@@ -209,8 +207,12 @@ export class BookService {
         createdAt: true,
         updatedAt: true,
         adminId: true,
+        isHidden: true,
+        loanEnabled: true,
       },
     });
+
+    return updated;
   }
 
   async remove(id: string, adminId: string) {
@@ -219,7 +221,6 @@ export class BookService {
       throw new ForbiddenException('Only creator can delete');
     }
 
-    // Verificar se há rentals associados
     const rentals = await this.prisma.rental.findMany({
       where: { bookId: id },
       select: { id: true },
@@ -231,12 +232,10 @@ export class BookService {
       );
     }
 
-    // Delete image from storage if exists
     if (book.imageUrl) {
       try {
         await this.storageService.deleteFileByUrl(book.imageUrl);
       } catch (error) {
-        // Log o erro mas não impede a exclusão do livro
         console.error('Error deleting book image from storage:', error);
       }
     }
@@ -251,16 +250,17 @@ export class BookService {
       include: { book: true },
     });
     if (!rental) throw new NotFoundException('Rental not found');
+
     await this.prisma.rental.update({
       where: { id: rental.id },
       data: { returnDate: new Date() },
     });
+
     await this.prisma.book.update({
       where: { id: bookId },
       data: { availableCopies: { increment: 1 } as any },
     });
 
-    // Notify user about the return
     await this.notificationService.notifyBookReturn(userId, {
       id: rental.book.id,
       title: rental.book.title,
@@ -274,6 +274,14 @@ export class BookService {
 
     const book = await this.prisma.book.findUnique({ where: { id: bookId } });
     if (!book) throw new NotFoundException('Livro não encontrado');
+
+    // 👇 bloqueia se oculto ou com empréstimo desativado
+    if (book.isHidden) {
+      throw new BadRequestException('Livro oculto. Não disponível para empréstimo.');
+    }
+    if (!book.loanEnabled) {
+      throw new BadRequestException('Empréstimo desativado para este livro.');
+    }
 
     if (book.availableCopies <= 0) {
       throw new BadRequestException('Sem cópias disponíveis');
@@ -301,7 +309,6 @@ export class BookService {
       },
     });
 
-    // Notify user about the rental
     await this.notificationService.notifyBookRental(
       userId,
       {
@@ -358,6 +365,8 @@ export class BookService {
             createdAt: true,
             updatedAt: true,
             adminId: true,
+            isHidden: true,
+            loanEnabled: true,
           },
         },
       },
@@ -366,5 +375,67 @@ export class BookService {
       },
     });
     return rentals;
+  }
+
+  // 🔹 Toggle: ocultar/exibir livro
+  async toggleVisibility(id: string, adminId: string) {
+    const book = await this.prisma.book.findUnique({ where: { id } });
+    if (!book) throw new NotFoundException('Book not found');
+    if (book.adminId !== adminId) {
+      throw new ForbiddenException('Only creator can change visibility');
+    }
+
+    const updated = await this.prisma.book.update({
+      where: { id },
+      data: { isHidden: !book.isHidden },
+      select: {
+        id: true,
+        title: true,
+        author: true,
+        isbn: true,
+        description: true,
+        imageUrl: true,
+        totalCopies: true,
+        availableCopies: true,
+        createdAt: true,
+        updatedAt: true,
+        adminId: true,
+        isHidden: true,
+        loanEnabled: true,
+      },
+    });
+
+    return updated;
+  }
+
+  // 🔹 Toggle: ativar/desativar empréstimo
+  async toggleLoanEnabled(id: string, adminId: string) {
+    const book = await this.prisma.book.findUnique({ where: { id } });
+    if (!book) throw new NotFoundException('Book not found');
+    if (book.adminId !== adminId) {
+      throw new ForbiddenException('Only creator can change loan status');
+    }
+
+    const updated = await this.prisma.book.update({
+      where: { id },
+      data: { loanEnabled: !book.loanEnabled },
+      select: {
+        id: true,
+        title: true,
+        author: true,
+        isbn: true,
+        description: true,
+        imageUrl: true,
+        totalCopies: true,
+        availableCopies: true,
+        createdAt: true,
+        updatedAt: true,
+        adminId: true,
+        isHidden: true,
+        loanEnabled: true,
+      },
+    });
+
+    return updated;
   }
 }

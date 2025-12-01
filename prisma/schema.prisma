@@ -61,7 +61,6 @@ model Book {
   totalCopies     Int      @map("total_copies")
   availableCopies Int      @map("available_copies")
 
-  // 👇 novos campos
   isHidden        Boolean  @default(false) @map("is_hidden")      // se true, some do catálogo do aluno
   loanEnabled     Boolean  @default(true)  @map("loan_enabled")   // se false, não pode alugar
 

@@ -24,9 +24,18 @@ import { GetUser } from 'src/auth/decorator/get-user.decorator';
 export class BookController {
   constructor(private service: BookService) {}
 
+  // 🔹 Lista pública (usuário final)
   @Get()
-  findAll() {
-    return this.service.findAll();
+  findAllPublic() {
+    return this.service.findAllPublic();
+  }
+
+  // 🔹 Lista completa (admin) – use no app de admin
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  @Get('admin')
+  findAllAdmin() {
+    return this.service.findAllAdmin();
   }
 
   @Get(':id')
@@ -64,7 +73,24 @@ export class BookController {
     return this.service.update(id, adminId, dto, image);
   }
 
-  // 🔹 Ocultar/exibir livro
+  /**
+   * 🔹 Endpoint específico para atualizar flags (casa com o Android)
+   * PATCH /books/:id/flags
+   * body: { isHidden?: boolean; loanEnabled?: boolean }
+   */
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  @Patch(':id/flags')
+  updateFlags(
+    @Param('id') id: string,
+    @GetUser('id') adminId: string,
+    @Body() body: { isHidden?: boolean; loanEnabled?: boolean },
+  ) {
+    return this.service.updateFlags(id, adminId, body);
+  }
+
+  // Se quiser, pode manter os toggle antigos como helpers extras:
+  /*
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
   @Patch(':id/toggle-visibility')
@@ -72,13 +98,13 @@ export class BookController {
     return this.service.toggleVisibility(id, adminId);
   }
 
-  // 🔹 Ativar/desativar empréstimo
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
   @Patch(':id/toggle-loan')
   toggleLoan(@Param('id') id: string, @GetUser('id') adminId: string) {
     return this.service.toggleLoanEnabled(id, adminId);
   }
+  */
 
   @UseGuards(RolesGuard)
   @Roles('ADMIN')

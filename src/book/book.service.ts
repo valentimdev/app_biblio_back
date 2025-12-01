@@ -18,7 +18,40 @@ export class BookService {
     private readonly notificationService: NotificationService,
   ) {}
 
-  async findAll() {
+  /**
+   * 🔹 Lista PÚBLICA (para alunos/usuários)
+   * – mostra só livros visíveis e com empréstimo habilitado
+   */
+  async findAllPublic() {
+    return this.prisma.book.findMany({
+      where: {
+        isHidden: false,
+        loanEnabled: true,
+      },
+      select: {
+        id: true,
+        title: true,
+        author: true,
+        isbn: true,
+        description: true,
+        imageUrl: true,
+        totalCopies: true,
+        availableCopies: true,
+        createdAt: true,
+        updatedAt: true,
+        adminId: true,
+        isHidden: true,
+        loanEnabled: true,
+      },
+      orderBy: { title: 'asc' },
+    });
+  }
+
+  /**
+   * 🔹 Lista COMPLETA (para admin)
+   * – traz todos, inclusive ocultos ou com empréstimo desativado
+   */
+  async findAllAdmin() {
     return this.prisma.book.findMany({
       select: {
         id: true,
@@ -35,6 +68,7 @@ export class BookService {
         isHidden: true,
         loanEnabled: true,
       },
+      orderBy: { title: 'asc' },
     });
   }
 
@@ -96,10 +130,7 @@ export class BookService {
             totalCopies: dto.totalCopies,
             availableCopies,
             imageUrl,
-            // isHidden e loanEnabled usam o default do Prisma,
-            // mas se você quiser permitir no DTO, pode colocar:
-            // isHidden: dto.isHidden ?? false,
-            // loanEnabled: dto.loanEnabled ?? true,
+            // isHidden / loanEnabled usam default do schema
           },
           select: {
             id: true,
@@ -275,14 +306,12 @@ export class BookService {
     const book = await this.prisma.book.findUnique({ where: { id: bookId } });
     if (!book) throw new NotFoundException('Livro não encontrado');
 
-    // 👇 bloqueia se oculto ou com empréstimo desativado
     if (book.isHidden) {
       throw new BadRequestException('Livro oculto. Não disponível para empréstimo.');
     }
     if (!book.loanEnabled) {
       throw new BadRequestException('Empréstimo desativado para este livro.');
     }
-
     if (book.availableCopies <= 0) {
       throw new BadRequestException('Sem cópias disponíveis');
     }
@@ -377,17 +406,28 @@ export class BookService {
     return rentals;
   }
 
-  // 🔹 Toggle: ocultar/exibir livro
-  async toggleVisibility(id: string, adminId: string) {
+  /**
+   * 🔹 Atualiza flags (isHidden / loanEnabled) – casa com o Android
+   * body: { isHidden?: boolean; loanEnabled?: boolean }
+   */
+  async updateFlags(
+    id: string,
+    adminId: string,
+    data: { isHidden?: boolean; loanEnabled?: boolean },
+  ) {
     const book = await this.prisma.book.findUnique({ where: { id } });
     if (!book) throw new NotFoundException('Book not found');
     if (book.adminId !== adminId) {
-      throw new ForbiddenException('Only creator can change visibility');
+      throw new ForbiddenException('Only creator can change flags');
     }
+
+    const updateData: any = {};
+    if (data.isHidden !== undefined) updateData.isHidden = data.isHidden;
+    if (data.loanEnabled !== undefined) updateData.loanEnabled = data.loanEnabled;
 
     const updated = await this.prisma.book.update({
       where: { id },
-      data: { isHidden: !book.isHidden },
+      data: updateData,
       select: {
         id: true,
         title: true,
@@ -408,34 +448,6 @@ export class BookService {
     return updated;
   }
 
-  // 🔹 Toggle: ativar/desativar empréstimo
-  async toggleLoanEnabled(id: string, adminId: string) {
-    const book = await this.prisma.book.findUnique({ where: { id } });
-    if (!book) throw new NotFoundException('Book not found');
-    if (book.adminId !== adminId) {
-      throw new ForbiddenException('Only creator can change loan status');
-    }
-
-    const updated = await this.prisma.book.update({
-      where: { id },
-      data: { loanEnabled: !book.loanEnabled },
-      select: {
-        id: true,
-        title: true,
-        author: true,
-        isbn: true,
-        description: true,
-        imageUrl: true,
-        totalCopies: true,
-        availableCopies: true,
-        createdAt: true,
-        updatedAt: true,
-        adminId: true,
-        isHidden: true,
-        loanEnabled: true,
-      },
-    });
-
-    return updated;
-  }
+  // Os métodos toggleVisibility / toggleLoan você pode até manter,
+  // mas depois de usar updateFlags + body, eles ficam meio redundantes.
 }

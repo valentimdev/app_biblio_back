@@ -16,8 +16,18 @@ export class RentalService {
       where: { id: dto.bookId },
     });
     if (!book) throw new NotFoundException('Livro não encontrado');
-    if (book.availableCopies < 1)
+
+    // 👇 bloqueia se oculto ou com empréstimo desativado
+    if (book.isHidden) {
+      throw new BadRequestException('Livro oculto. Não disponível para empréstimo.');
+    }
+    if (!book.loanEnabled) {
+      throw new BadRequestException('Empréstimo desativado para este livro.');
+    }
+
+    if (book.availableCopies < 1) {
       throw new ConflictException('Livro sem cópias disponíveis');
+    }
 
     const user = await this.prisma.user.findUnique({
       where: { id: dto.userId },
